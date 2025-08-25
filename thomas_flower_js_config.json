@@ -1,0 +1,194 @@
+{
+  "canonical_xy": {
+    "id": "canonical_xy",
+    "description": "Baseline fit on XY projection; rotational projection = identity",
+    "model": {
+      "b": 0.19,
+      "dt": 0.01,
+      "steps": 300000,
+      "transient_steps": 2000,
+      "seed": [0.1, 0.0, 0.0]
+    },
+    "projection": {
+      "plane": "xy",
+      "rotation": {
+        "axis": "z",
+        "angle_rad": 0.0
+      }
+    },
+    "rhodonea": {
+      "k": 3.96,
+      "m": 24.26,
+      "phi": -0.286,
+      "a": 3.74,
+      "formula": "r(theta) = a * cos(k*m*theta + phi)"
+    },
+    "metrics": {
+      "E_flower": 0.120,
+      "lambda_max": 0.103,
+      "FI_computed": 0.8054705,
+      "FI_reported": 0.8054705
+    },
+    "notes": "Values from phenomenological fit; use as seed for refits under rotations."
+  },
+  "rotated_xy_15": {
+    "id": "rotated_xy_15",
+    "description": "XY projection with 15-degree rotation",
+    "model": {
+      "b": 0.19,
+      "dt": 0.01,
+      "steps": 300000,
+      "transient_steps": 2000,
+      "seed": [0.1, 0.0, 0.0]
+    },
+    "projection": {
+      "plane": "xy",
+      "rotation": {
+        "axis": "z",
+        "angle_rad": 0.2618
+      }
+    },
+    "rhodonea": {
+      "k": 3.96,
+      "m": 24.26,
+      "phi": -0.286,
+      "a": 3.74,
+      "formula": "r(theta) = a * cos(k*m*theta + phi)"
+    },
+    "metrics": {
+      "E_flower": 0.125,
+      "lambda_max": 0.103,
+      "FI_computed": 0.8001,
+      "FI_reported": 0.8001
+    },
+    "notes": "15-degree rotation applied to XY plane"
+  },
+  "yz_projection": {
+    "id": "yz_projection",
+    "description": "YZ plane projection",
+    "model": {
+      "b": 0.19,
+      "dt": 0.01,
+      "steps": 300000,
+      "transient_steps": 2000,
+      "seed": [0.1, 0.0, 0.0]
+    },
+    "projection": {
+      "plane": "yz",
+      "rotation": {
+        "axis": "x",
+        "angle_rad": 0.0
+      }
+    },
+    "rhodonea": {
+      "k": 4.12,
+      "m": 23.8,
+      "phi": -0.31,
+      "a": 3.65,
+      "formula": "r(theta) = a * cos(k*m*theta + phi)"
+    },
+    "metrics": {
+      "E_flower": 0.135,
+      "lambda_max": 0.103,
+      "FI_computed": 0.7894,
+      "FI_reported": 0.7894
+    },
+    "notes": "Projection onto YZ plane"
+  },
+  "zx_projection": {
+    "id": "zx_projection",
+    "description": "ZX plane projection",
+    "model": {
+      "b": 0.19,
+      "dt": 0.01,
+      "steps": 300000,
+      "transient_steps": 2000,
+      "seed": [0.1, 0.0, 0.0]
+    },
+    "projection": {
+      "plane": "zx",
+      "rotation": {
+        "axis": "y",
+        "angle_rad": 0.0
+      }
+    },
+    "rhodonea": {
+      "k": 4.05,
+      "m": 24.1,
+      "phi": -0.295,
+      "a": 3.70,
+      "formula": "r(theta) = a * cos(k*m*theta + phi)"
+    },
+    "metrics": {
+      "E_flower": 0.128,
+      "lambda_max": 0.103,
+      "FI_computed": 0.7968,
+      "FI_reported": 0.7968
+    },
+    "notes": "Projection onto ZX plane"
+  },
+  "chaos_edge_b_0.185": {
+    "id": "chaos_edge_b_0.185",
+    "description": "Near chaos boundary with b=0.185",
+    "model": {
+      "b": 0.185,
+      "dt": 0.01,
+      "steps": 300000,
+      "transient_steps": 2000,
+      "seed": [0.1, 0.0, 0.0]
+    },
+    "projection": {
+      "plane": "xy",
+      "rotation": {
+        "axis": "z",
+        "angle_rad": 0.0
+      }
+    },
+    "rhodonea": {
+      "k": 3.88,
+      "m": 24.5,
+      "phi": -0.28,
+      "a": 3.82,
+      "formula": "r(theta) = a * cos(k*m*theta + phi)"
+    },
+    "metrics": {
+      "E_flower": 0.118,
+      "lambda_max": 0.095,
+      "FI_computed": 0.8166,
+      "FI_reported": 0.8166
+    },
+    "notes": "Exploring behavior near chaos transition"
+  },
+  "high_chaos_b_0.21": {
+    "id": "high_chaos_b_0.21",
+    "description": "Deep chaos regime with b=0.21",
+    "model": {
+      "b": 0.21,
+      "dt": 0.01,
+      "steps": 300000,
+      "transient_steps": 2000,
+      "seed": [0.1, 0.0, 0.0]
+    },
+    "projection": {
+      "plane": "xy",
+      "rotation": {
+        "axis": "z",
+        "angle_rad": 0.0
+      }
+    },
+    "rhodonea": {
+      "k": 4.25,
+      "m": 23.2,
+      "phi": -0.32,
+      "a": 3.45,
+      "formula": "r(theta) = a * cos(k*m*theta + phi)"
+    },
+    "metrics": {
+      "E_flower": 0.145,
+      "lambda_max": 0.125,
+      "FI_computed": 0.7687,
+      "FI_reported": 0.7687
+    },
+    "notes": "Strong chaotic behavior"
+  }
+}
