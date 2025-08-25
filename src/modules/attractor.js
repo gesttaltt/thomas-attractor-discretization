@@ -10,6 +10,7 @@ export class ThomasAttractor {
         this.position = { x: 0.1, y: 0.0, z: 0.0 };
         this.transientSteps = 2000;
         this.currentStep = 0;
+        this.integrationMethod = 'RK4'; // Default to RK4, can be 'Euler' or 'RK4'
     }
 
     /**
@@ -27,6 +28,17 @@ export class ThomasAttractor {
      * @returns {Object} New position {x, y, z}
      */
     step() {
+        if (this.integrationMethod === 'RK4') {
+            return this.stepRK4();
+        } else {
+            return this.stepEuler();
+        }
+    }
+    
+    /**
+     * Euler integration step
+     */
+    stepEuler() {
         const { x, y, z } = this.position;
         
         // Thomas attractor equations
@@ -42,6 +54,67 @@ export class ThomasAttractor {
         this.currentStep++;
         
         return { ...this.position, dx, dy, dz };
+    }
+    
+    /**
+     * RK4 (Runge-Kutta 4th order) integration step
+     */
+    stepRK4() {
+        const state = { ...this.position };
+        
+        // k1 = f(state)
+        const k1 = this.computeDerivatives(state);
+        
+        // k2 = f(state + dt/2 * k1)
+        const state2 = {
+            x: state.x + k1.dx * this.dt / 2,
+            y: state.y + k1.dy * this.dt / 2,
+            z: state.z + k1.dz * this.dt / 2
+        };
+        const k2 = this.computeDerivatives(state2);
+        
+        // k3 = f(state + dt/2 * k2)
+        const state3 = {
+            x: state.x + k2.dx * this.dt / 2,
+            y: state.y + k2.dy * this.dt / 2,
+            z: state.z + k2.dz * this.dt / 2
+        };
+        const k3 = this.computeDerivatives(state3);
+        
+        // k4 = f(state + dt * k3)
+        const state4 = {
+            x: state.x + k3.dx * this.dt,
+            y: state.y + k3.dy * this.dt,
+            z: state.z + k3.dz * this.dt
+        };
+        const k4 = this.computeDerivatives(state4);
+        
+        // Combine: state_new = state + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+        this.position.x += this.dt / 6 * (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx);
+        this.position.y += this.dt / 6 * (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy);
+        this.position.z += this.dt / 6 * (k1.dz + 2 * k2.dz + 2 * k3.dz + k4.dz);
+        
+        this.currentStep++;
+        
+        // Return current derivatives for consistency
+        const currentDerivatives = this.computeDerivatives(this.position);
+        return { 
+            ...this.position, 
+            dx: currentDerivatives.dx,
+            dy: currentDerivatives.dy,
+            dz: currentDerivatives.dz
+        };
+    }
+    
+    /**
+     * Compute Thomas system derivatives
+     */
+    computeDerivatives(state) {
+        return {
+            dx: Math.sin(state.y) - this.b * state.x,
+            dy: Math.sin(state.z) - this.b * state.y,
+            dz: Math.sin(state.x) - this.b * state.z
+        };
     }
 
     /**

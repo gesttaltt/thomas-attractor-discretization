@@ -5,12 +5,16 @@ An interactive web-based visualization tool for exploring the Thomas attractor w
 ## Features
 
 - **3D Thomas Attractor Visualization**: Real-time particle-based rendering of the chaotic attractor
+- **Thomas Chaos Meter (CTM)**: Advanced chaos quantification based on Lyapunov exponents and Kaplan-Yorke dimension
 - **Floral Projection Panel**: 2D polar projection showing the attractor's radial patterns
 - **Rhodonea Overlay**: Mathematical rose curve fitting to quantify floral structure
 - **Flower Index (FI)**: Novel metric combining radial error and Lyapunov exponent
+- **Lyapunov Exponent Calculation**: Real-time computation using QR decomposition (Benettin method)
+- **Parameter Sweep Analysis**: Explore chaos behavior across parameter space with automatic critical point detection
+- **Bootstrap Confidence Intervals**: Statistical uncertainty quantification for all metrics
 - **Multiple Presets**: Pre-configured parameter sets for different projections and chaos regimes
 - **Interactive Controls**: Adjust parameters, opacity, and visualization modes in real-time
-- **Export Capabilities**: Save visualizations as PNG images or parameter data as JSON
+- **Export Capabilities**: Save visualizations as PNG, parameter data as JSON, or sweep results as CSV/MATLAB
 
 ## Quick Start
 
@@ -65,15 +69,30 @@ Simply open `index.html` in a modern web browser. Note that some features (prese
 
 ## Understanding the Metrics
 
+### CTM (Thomas Chaos Meter)
+- Composite chaos metric: CTM = √(C_λ × C_D)
+- C_λ = 1 - exp(-λ₁/(3b)): Unpredictability component
+- C_D = clamp(D_KY - 2, 0, 1): Geometric complexity
+- Range: 0-1, with interpretations:
+  - CTM < 0.05: Near-regular dynamics
+  - CTM 0.10-0.25: Moderate chaos (typical Thomas)
+  - CTM > 0.25: Strong chaos
+
+### Lyapunov Exponents (λ₁, λ₂, λ₃)
+- Measure exponential divergence of nearby trajectories
+- λ₁ > 0 indicates chaos
+- Sum identity: λ₁ + λ₂ + λ₃ = -3b (exact for Thomas)
+- Computed using QR decomposition method
+
+### Kaplan-Yorke Dimension (D_KY)
+- Fractal dimension of the attractor
+- D_KY = 2 + λ₁/|λ₃| for Thomas system
+- Values typically between 2.0 and 2.3
+
 ### E_flower (Radial Error)
 - RMSE between attractor points and fitted rhodonea curve
 - Lower values (~0.12) indicate better floral structure
 - Computed over sliding window of recent points
-
-### λ (Lyapunov Exponent)
-- Measure of chaos/sensitivity to initial conditions
-- ~0.103 for standard Thomas attractor at b=0.19
-- Higher values indicate stronger chaos
 
 ### FI (Flower Index)
 - Combined metric: FI = (1/(1+E_flower)) × e^(-λ)
