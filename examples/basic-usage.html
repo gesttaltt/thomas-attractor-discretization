@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Usage Example - Thomas Flower</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a2e;
+            color: white;
+        }
+        canvas {
+            border: 1px solid #88aaff;
+            display: block;
+            margin: 20px 0;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        #output {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Basic Thomas Attractor Example</h1>
+    <p>This example demonstrates basic usage of the Thomas Flower modules.</p>
+    
+    <canvas id="canvas" width="600" height="400"></canvas>
+    
+    <div class="controls">
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+        <label>
+            b: <input type="range" id="bSlider" min="0.15" max="0.25" step="0.001" value="0.19">
+            <span id="bValue">0.19</span>
+        </label>
+    </div>
+    
+    <div id="output">
+        <p>Step: <span id="step">0</span></p>
+        <p>Position: <span id="position">(0, 0, 0)</span></p>
+        <p>FI: <span id="fi">0.000</span></p>
+    </div>
+
+    <script type="module">
+        // Simple standalone example without full app dependencies
+        class SimpleThomas {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.b = 0.19;
+                this.dt = 0.01;
+                this.position = { x: 0.1, y: 0, z: 0 };
+                this.step = 0;
+                this.running = false;
+                this.points = [];
+                this.maxPoints = 10000;
+            }
+            
+            stepAttractor() {
+                const { x, y, z } = this.position;
+                
+                // Thomas attractor equations
+                const dx = Math.sin(y) - this.b * x;
+                const dy = Math.sin(z) - this.b * y;
+                const dz = Math.sin(x) - this.b * z;
+                
+                // Euler integration
+                this.position.x += dx * this.dt;
+                this.position.y += dy * this.dt;
+                this.position.z += dz * this.dt;
+                
+                this.step++;
+                
+                // Store point for visualization
+                this.points.push({ ...this.position });
+                if (this.points.length > this.maxPoints) {
+                    this.points.shift();
+                }
+            }
+            
+            draw() {
+                // Clear canvas with fade effect
+                this.ctx.fillStyle = 'rgba(26, 26, 46, 0.05)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw attractor projection (XY plane)
+                this.ctx.strokeStyle = 'rgba(136, 170, 255, 0.5)';
+                this.ctx.beginPath();
+                
+                const scale = 50;
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                
+                this.points.forEach((point, i) => {
+                    const x = centerX + point.x * scale;
+                    const y = centerY + point.y * scale;
+                    
+                    if (i === 0) {
+                        this.ctx.moveTo(x, y);
+                    } else {
+                        this.ctx.lineTo(x, y);
+                    }
+                });
+                
+                this.ctx.stroke();
+                
+                // Draw current point
+                if (this.points.length > 0) {
+                    const lastPoint = this.points[this.points.length - 1];
+                    this.ctx.fillStyle = '#ff6b9d';
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        centerX + lastPoint.x * scale,
+                        centerY + lastPoint.y * scale,
+                        3, 0, Math.PI * 2
+                    );
+                    this.ctx.fill();
+                }
+            }
+            
+            computeSimpleFI() {
+                // Simplified Flower Index calculation
+                if (this.points.length < 100) return 0;
+                
+                // Calculate average radius
+                let avgRadius = 0;
+                this.points.forEach(p => {
+                    avgRadius += Math.sqrt(p.x * p.x + p.y * p.y);
+                });
+                avgRadius /= this.points.length;
+                
+                // Simple FI approximation
+                const E = Math.abs(avgRadius - 3.5) / 3.5; // Error from expected radius
+                const lambda = 0.103; // Preset value
+                return (1 / (1 + E)) * Math.exp(-lambda);
+            }
+            
+            reset() {
+                this.position = { x: 0.1, y: 0, z: 0 };
+                this.step = 0;
+                this.points = [];
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+        
+        // Initialize
+        const canvas = document.getElementById('canvas');
+        const thomas = new SimpleThomas(canvas);
+        
+        // Animation loop
+        function animate() {
+            if (thomas.running) {
+                // Run multiple steps per frame
+                for (let i = 0; i < 10; i++) {
+                    thomas.stepAttractor();
+                }
+                
+                thomas.draw();
+                
+                // Update display
+                document.getElementById('step').textContent = thomas.step;
+                const pos = thomas.position;
+                document.getElementById('position').textContent = 
+                    `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`;
+                document.getElementById('fi').textContent = thomas.computeSimpleFI().toFixed(3);
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Controls
+        document.getElementById('startBtn').addEventListener('click', () => {
+            thomas.running = true;
+        });
+        
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            thomas.running = false;
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            thomas.running = false;
+            thomas.reset();
+            document.getElementById('step').textContent = '0';
+            document.getElementById('position').textContent = '(0.1, 0, 0)';
+            document.getElementById('fi').textContent = '0.000';
+        });
+        
+        document.getElementById('bSlider').addEventListener('input', (e) => {
+            thomas.b = parseFloat(e.target.value);
+            document.getElementById('bValue').textContent = thomas.b.toFixed(3);
+            thomas.reset();
+        });
+        
+        // Start animation loop
+        animate();
+    </script>
+</body>
+</html>
