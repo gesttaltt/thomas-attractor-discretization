@@ -9,20 +9,71 @@ export class PresetRepository {
         this.customPresets = new Map();
         this.currentPresetId = null;
         this.storageKey = 'thomas_attractor_custom_presets';
+        this.initialized = false;
         
-        this.initializeDefaultPresets();
+        // Initialize asynchronously
+        this.init();
+    }
+
+    async init() {
+        await this.initializeDefaultPresets();
         this.loadCustomPresets();
+        this.initialized = true;
     }
 
     /**
-     * Initialize default presets
+     * Initialize default presets from external JSON
      */
-    initializeDefaultPresets() {
-        const defaults = this.getDefaultPresets();
-        
-        Object.entries(defaults).forEach(([id, preset]) => {
-            this.presets.set(id, preset);
-        });
+    async initializeDefaultPresets() {
+        try {
+            // Load presets from external JSON file with rich mathematical data
+            const response = await fetch('./data/presets.json');
+            const presets = await response.json();
+            
+            // Convert array to map for easy lookup
+            presets.forEach(preset => {
+                // Normalize preset structure for clean architecture
+                const normalizedPreset = {
+                    id: preset.id,
+                    name: this.generateDisplayName(preset.description),
+                    description: preset.description,
+                    model: {
+                        b: preset.model.b,
+                        dt: preset.model.dt,
+                        seed: preset.model.seed,
+                        transientSteps: preset.model.transient_steps
+                    },
+                    projection: preset.projection,
+                    rhodonea: preset.rhodonea,
+                    metrics: {
+                        // Mathematical theory data
+                        E_flower: preset.metrics.E_flower,
+                        lambda_max: preset.metrics.lambda_max,
+                        FI_computed: preset.metrics.FI_computed,
+                        FI_reported: preset.metrics.FI_reported,
+                        // Derived CTM components (computed at runtime)
+                        expectedCTM: this.computeExpectedCTM(preset.metrics.lambda_max, preset.model.b)
+                    },
+                    visualization: {
+                        particleSize: 0.012,
+                        maxParticles: 100000,
+                        autoRotate: true
+                    },
+                    notes: preset.notes
+                };
+                
+                this.presets.set(preset.id, normalizedPreset);
+            });
+            
+            console.log(`📋 Loaded ${presets.length} presets with full mathematical data`);
+            
+        } catch (error) {
+            console.error('Failed to load external presets, falling back to defaults:', error);
+            const defaults = this.getFallbackPresets();
+            Object.entries(defaults).forEach(([id, preset]) => {
+                this.presets.set(id, preset);
+            });
+        }
     }
 
     /**
@@ -59,6 +110,7 @@ export class PresetRepository {
      * Get preset by ID
      */
     async get(id) {
+        await this.ensureInitialized();
         const preset = this.presets.get(id) || this.customPresets.get(id);
         if (!preset) {
             throw new Error(`Preset '${id}' not found`);
@@ -67,9 +119,19 @@ export class PresetRepository {
     }
 
     /**
+     * Ensure repository is initialized
+     */
+    async ensureInitialized() {
+        if (!this.initialized) {
+            await this.init();
+        }
+    }
+
+    /**
      * Get all presets
      */
     async getAll() {
+        await this.ensureInitialized();
         const allPresets = new Map([...this.presets, ...this.customPresets]);
         return Object.fromEntries(allPresets);
     }
@@ -78,6 +140,7 @@ export class PresetRepository {
      * Get preset list for UI
      */
     async getPresetList() {
+        await this.ensureInitialized();
         const all = await this.getAll();
         
         return Object.entries(all).map(([id, preset]) => ({
@@ -293,9 +356,28 @@ export class PresetRepository {
     }
 
     /**
-     * Get default presets configuration
+     * Generate display name from description
      */
-    getDefaultPresets() {
+    generateDisplayName(description) {
+        return description.replace(/^(.*?)\s*[;:-].*$/, '$1').trim();
+    }
+
+    /**
+     * Compute expected CTM from lambda_max and b using mathematical theory
+     * CTM = sqrt(C_lambda * C_D)
+     * C_lambda = 1 - exp(-lambda_1/(3b))
+     * C_D = clamp(D_KY - 2, 0, 1) - approximated for now
+     */
+    computeExpectedCTM(lambda_max, b) {
+        const C_lambda = 1 - Math.exp(-lambda_max / (3 * b));
+        const C_D = 0.8; // Approximation - would need full spectrum for exact calculation
+        return Math.sqrt(C_lambda * C_D);
+    }
+
+    /**
+     * Fallback presets (minimal hardcoded version)
+     */
+    getFallbackPresets() {
         return {
             canonical_xy: {
                 id: "canonical_xy",
