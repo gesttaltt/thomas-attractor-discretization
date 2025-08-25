@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thomas Attractor - Unified Clean Architecture</title>
+    <meta name="description" content="Interactive Thomas Attractor visualization with chaos analysis, floral projections, and GPU acceleration">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            grid-template-rows: 1fr auto;
+            grid-template-areas: 
+                "main controls"
+                "floral controls";
+        }
+
+        .main-container {
+            grid-area: main;
+            position: relative;
+            background: linear-gradient(45deg, #000011 0%, #001133 100%);
+        }
+
+        #mainCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            display: block;
+        }
+
+        #mainCanvas:active {
+            cursor: grabbing;
+        }
+
+        .floral-container {
+            grid-area: floral;
+            background: rgba(15, 15, 25, 0.95);
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            position: relative;
+        }
+
+        #floralCanvas {
+            width: 100%;
+            height: 200px;
+            display: block;
+        }
+
+        .controls-container {
+            grid-area: controls;
+            background: rgba(15, 15, 25, 0.98);
+            backdrop-filter: blur(15px);
+            border-left: 1px solid rgba(100, 181, 246, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Panel Styles */
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(100, 181, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(100, 181, 246, 0.4);
+        }
+
+        .panel-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .panel-title {
+            color: #64b5f6;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-content {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .panel.collapsed .panel-content {
+            display: none;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .panel.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        /* Control Groups */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 13px;
+            color: #b0b0b0;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-value {
+            color: #64b5f6;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Sliders */
+        .slider-container {
+            position: relative;
+            margin: 8px 0;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(100, 181, 246, 0.2) 0%, rgba(100, 181, 246, 0.5) 100%);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            transition: background 0.3s ease;
+        }
+
+        .slider:hover {
+            background: linear-gradient(90deg, rgba(100, 181, 246, 0.3) 0%, rgba(100, 181, 246, 0.6) 100%);
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #64b5f6 0%, #90caf9 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(100, 181, 246, 0.3);
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: linear-gradient(135deg, #90caf9 0%, #bbdefb 100%);
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(100, 181, 246, 0.5);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #64b5f6 0%, #90caf9 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .slider::-moz-range-thumb:hover {
+            background: linear-gradient(135deg, #90caf9 0%, #bbdefb 100%);
+            transform: scale(1.2);
+        }
+
+        /* Buttons */
+        .button {
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .button:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: not-allowed;
+        }
+
+        .button.secondary {
+            background: linear-gradient(135deg, #374151 0%, #6b7280 100%);
+        }
+
+        .button.secondary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #4b5563 0%, #9ca3af 100%);
+        }
+
+        .button.success {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+
+        .button.success:hover:not(:disabled) {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+        }
+
+        .button.danger {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+
+        .button.danger:hover:not(:disabled) {
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .button-group .button {
+            flex: 1;
+        }
+
+        /* Selects */
+        .select {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .select:focus {
+            border-color: #64b5f6;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .select option {
+            background: #1a1a2e;
+            color: #ffffff;
+        }
+
+        /* Toggles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .toggle input {
+            display: none;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 22px;
+            height: 22px;
+            background: #ffffff;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle input:checked + .toggle-slider {
+            transform: translateX(22px);
+            background: #64b5f6;
+        }
+
+        .toggle input:checked ~ .toggle {
+            background: rgba(100, 181, 246, 0.3);
+        }
+
+        /* HUD */
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 220px;
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            z-index: 100;
+        }
+
+        .hud-title {
+            color: #64b5f6;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hud-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .hud-label {
+            color: #b0b0b0;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .hud-value {
+            color: #ffffff;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .status.running {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: #ffffff;
+        }
+
+        .status.paused {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+        }
+
+        .status.reset, .status.analyzing {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: #ffffff;
+        }
+
+        .status.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff;
+        }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: #64b5f6;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(100, 181, 246, 0.1);
+            border-top: 4px solid #64b5f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .loading-subtext {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        /* Help Text */
+        .help-text {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.4;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .help-text strong {
+            color: #64b5f6;
+        }
+
+        /* Performance Warning */
+        .performance-indicator {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 11px;
+            color: #f59e0b;
+            margin-top: 8px;
+        }
+
+        .performance-indicator.good {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            body {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 250px;
+                grid-template-areas: 
+                    "main"
+                    "controls";
+            }
+
+            .controls-container {
+                border-left: none;
+                border-top: 1px solid rgba(100, 181, 246, 0.3);
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+
+            .panel {
+                min-width: 280px;
+                flex-shrink: 0;
+            }
+
+            .floral-container {
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                width: 300px;
+                height: 200px;
+                z-index: 50;
+            }
+
+            .hud {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                min-width: 180px;
+                padding: 12px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hud {
+                font-size: 11px;
+                min-width: 160px;
+                padding: 10px;
+            }
+
+            .floral-container {
+                width: 250px;
+                height: 150px;
+            }
+
+            #floralCanvas {
+                height: 150px;
+            }
+        }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Focus indicators for keyboard navigation */
+        .button:focus,
+        .slider:focus,
+        .select:focus {
+            outline: 2px solid #64b5f6;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Thomas Attractor</div>
+        <div class="loading-subtext">Initializing clean architecture...</div>
+    </div>
+
+    <!-- Main Visualization -->
+    <div class="main-container">
+        <canvas id="mainCanvas"></canvas>
+        
+        <!-- Performance HUD -->
+        <div class="hud">
+            <div class="hud-title">
+                📊 System Status
+            </div>
+            <div class="hud-grid">
+                <div class="hud-item">
+                    <div class="hud-label">FPS</div>
+                    <div class="hud-value" id="fps">--</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">Particles</div>
+                    <div class="hud-value" id="particles">--</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">Steps</div>
+                    <div class="hud-value" id="step">--</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">CTM</div>
+                    <div class="hud-value" id="ctm">--</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">λ₁</div>
+                    <div class="hud-value" id="lyapunov">--</div>
+                </div>
+                <div class="hud-item">
+                    <div class="hud-label">D_KY</div>
+                    <div class="hud-value" id="dimension">--</div>
+                </div>
+            </div>
+            <div class="control-group" style="margin-top: 12px;">
+                <div class="hud-item">
+                    <div class="hud-label">Status</div>
+                    <span class="status" id="status">Initializing</span>
+                </div>
+                <div class="hud-item" style="margin-top: 8px;">
+                    <div class="hud-label">Preset</div>
+                    <div class="hud-value" id="currentPreset">None</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floral Projection Panel -->
+    <div class="floral-container">
+        <canvas id="floralCanvas"></canvas>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls-container">
+        <!-- Simulation Parameters -->
+        <div class="panel">
+            <div class="panel-header" data-toggle-panel="parameters">
+                <div class="panel-title">
+                    🎛️ Parameters
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="panel-content">
+                <div class="control-group">
+                    <label class="control-label">
+                        Thomas Parameter (b)
+                        <span class="control-value" id="bValue">0.19</span>
+                    </label>
+                    <div class="slider-container">
+                        <input type="range" id="bSlider" class="slider" 
+                               min="0.05" max="0.35" step="0.001" value="0.19">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">
+                        Particle Size
+                        <span class="control-value" id="particleSizeValue">0.012</span>
+                    </label>
+                    <div class="slider-container">
+                        <input type="range" id="particleSizeSlider" class="slider"
+                               min="0.005" max="0.05" step="0.001" value="0.012">
+                    </div>
+                </div>
+                
+                <div class="help-text">
+                    <strong>Tip:</strong> Adjust b parameter to explore different dynamical regimes. 
+                    Values around 0.19 exhibit chaotic behavior.
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulation Controls -->
+        <div class="panel">
+            <div class="panel-header" data-toggle-panel="simulation">
+                <div class="panel-title">
+                    🎮 Simulation
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="panel-content">
+                <div class="button-group">
+                    <button id="startButton" class="button">▶ Start</button>
+                    <button id="pauseButton" class="button secondary">⏸ Pause</button>
+                </div>
+                
+                <div class="button-group">
+                    <button id="resetButton" class="button secondary">🔄 Reset</button>
+                    <button id="clearButton" class="button danger">🗑 Clear</button>
+                </div>
+                
+                <div class="control-group">
+                    <div class="toggle-container">
+                        <label class="control-label">Auto Rotate</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoRotate" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="help-text">
+                    <strong>Shortcuts:</strong> Space (pause), Ctrl+R (reset), Ctrl+C (clear)
+                </div>
+            </div>
+        </div>
+
+        <!-- View Controls -->
+        <div class="panel">
+            <div class="panel-header" data-toggle-panel="view">
+                <div class="panel-title">
+                    👁️ View
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="panel-content">
+                <div class="control-group">
+                    <label class="control-label">Projection Plane</label>
+                    <select id="projectionPlane" class="select">
+                        <option value="xy">XY Plane</option>
+                        <option value="yz">YZ Plane</option>
+                        <option value="zx">ZX Plane</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <div class="toggle-container">
+                        <label class="control-label">Floral Panel</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="floralToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Performance</label>
+                    <select id="performanceMode" class="select">
+                        <option value="auto">Auto</option>
+                        <option value="low">Low (30K)</option>
+                        <option value="medium">Medium (80K)</option>
+                        <option value="high">High (150K)</option>
+                        <option value="ultra">Ultra (250K)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="panel">
+            <div class="panel-header" data-toggle-panel="presets">
+                <div class="panel-title">
+                    📋 Presets
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="panel-content">
+                <div class="control-group">
+                    <label class="control-label">Load Preset</label>
+                    <select id="presetSelect" class="select">
+                        <option value="">Loading presets...</option>
+                    </select>
+                </div>
+                
+                <button id="savePreset" class="button secondary">💾 Save Current</button>
+                
+                <div class="help-text">
+                    Presets contain optimized parameters for different chaos regimes and projections.
+                </div>
+            </div>
+        </div>
+
+        <!-- Export & Analysis -->
+        <div class="panel">
+            <div class="panel-header" data-toggle-panel="export">
+                <div class="panel-title">
+                    📊 Export & Analysis
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="panel-content">
+                <div class="button-group">
+                    <button id="exportImage" class="button success">🖼️ Image</button>
+                    <button id="exportData" class="button success">📄 Data</button>
+                </div>
+                
+                <button id="shareButton" class="button secondary">🔗 Share Link</button>
+                
+                <button id="parameterSweep" class="button">📈 Parameter Sweep</button>
+                
+                <div class="help-text">
+                    <strong>Shortcuts:</strong> Ctrl+E (export image), Ctrl+S (share link)
+                </div>
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="panel collapsed">
+            <div class="panel-header" data-toggle-panel="info">
+                <div class="panel-title">
+                    ℹ️ About
+                </div>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="panel-content">
+                <div class="help-text">
+                    <strong>Thomas Attractor</strong><br>
+                    Unified Clean Architecture v2.0<br><br>
+                    
+                    <strong>Equations:</strong><br>
+                    ẋ = sin(y) - bx<br>
+                    ẏ = sin(z) - by<br>
+                    ż = sin(x) - bz<br><br>
+                    
+                    <strong>Features:</strong><br>
+                    • GPU-accelerated rendering<br>
+                    • Real-time chaos analysis<br>
+                    • Floral polar projections<br>
+                    • Thomas Chaos Meter (CTM)<br>
+                    • Parameter sweep analysis<br>
+                    • Export & sharing capabilities<br><br>
+                    
+                    Built with hexagonal architecture, SOLID principles, and dependency injection.
+                </div>
+                
+                <div class="performance-indicator" id="performanceIndicator">
+                    GPU acceleration enabled. Performance monitoring active.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <!-- Three.js r179 (Latest as of August 2025) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.179.0/build/three.min.js"></script>
+    
+    <!-- Main unified application -->
+    <script type="module" src="./src/main-unified.js"></script>
+
+    <script>
+        // Panel toggle functionality
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.panel-header')) {
+                const panel = e.target.closest('.panel');
+                panel.classList.toggle('collapsed');
+            }
+        });
+
+        // Hide loading screen when everything is loaded
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 2000);
+        });
+
+        // Performance indicator updates
+        let lastFPS = 0;
+        const updatePerformanceIndicator = () => {
+            const indicator = document.getElementById('performanceIndicator');
+            const fpsElement = document.getElementById('fps');
+            
+            if (fpsElement && indicator) {
+                const currentFPS = parseInt(fpsElement.textContent) || 0;
+                
+                if (currentFPS !== lastFPS) {
+                    if (currentFPS >= 55) {
+                        indicator.textContent = `Excellent performance: ${currentFPS} FPS`;
+                        indicator.className = 'performance-indicator good';
+                    } else if (currentFPS >= 30) {
+                        indicator.textContent = `Good performance: ${currentFPS} FPS`;
+                        indicator.className = 'performance-indicator';
+                    } else if (currentFPS > 0) {
+                        indicator.textContent = `Performance warning: ${currentFPS} FPS - Consider reducing quality`;
+                        indicator.className = 'performance-indicator';
+                    }
+                    
+                    lastFPS = currentFPS;
+                }
+            }
+        };
+        
+        setInterval(updatePerformanceIndicator, 1000);
+
+        // Accessibility enhancements
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Close any open dropdowns or modals
+                document.querySelectorAll('.panel.collapsed').forEach(panel => {
+                    panel.classList.remove('collapsed');
+                });
+            }
+        });
+
+        // Window focus/blur optimization
+        document.addEventListener('visibilitychange', () => {
+            if (window.unifiedThomasApp) {
+                // Could pause/resume simulation based on visibility
+                console.log('Visibility changed:', document.hidden ? 'hidden' : 'visible');
+            }
+        });
+    </script>
+</body>
+</html>

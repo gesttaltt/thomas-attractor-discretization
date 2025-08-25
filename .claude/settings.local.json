@@ -6,7 +6,9 @@
       "Read(/C:\\Users\\Gestalt\\Desktop/**)",
       "Read(/C:\\Users\\Gestalt\\Desktop/**)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(python:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
