@@ -1,7 +1,9 @@
 /**
  * 3D Renderer - Three.js visualization
- * Simplified without dependency injection
+ * Enhanced with volumetric effects and multi-layer rendering
  */
+
+import { VolumetricEffects } from './VolumetricEffects.js';
 
 export class Renderer3D {
     constructor(canvas, config = {}) {
@@ -14,6 +16,7 @@ export class Renderer3D {
             cameraDistance: config.cameraDistance || 20,
             backgroundColor: config.backgroundColor || 0x000011,
             particleColor: config.particleColor || 0x64b5f6,
+            enableVolumetricEffects: config.enableVolumetricEffects !== false,
             ...config
         };
 
@@ -23,6 +26,8 @@ export class Renderer3D {
         this.particles = null;
         this.particleIndex = 0;
         this.controls = null;
+        this.volumetricEffects = null;
+        this.velocityData = [];
         
         this.init();
     }
@@ -54,6 +59,11 @@ export class Renderer3D {
         
         // Setup lighting
         this.setupLighting();
+        
+        // Setup volumetric effects
+        if (this.config.enableVolumetricEffects) {
+            this.setupVolumetricEffects();
+        }
         
         // Handle resize
         window.addEventListener('resize', () => this.handleResize());
@@ -120,9 +130,22 @@ export class Renderer3D {
         this.scene.add(pointLight);
     }
 
+    setupVolumetricEffects() {
+        this.volumetricEffects = new VolumetricEffects(this.scene, {
+            enableDensityClouds: true,
+            enableVelocityGlow: true,
+            enableEnergyField: true,
+            enableVorticity: true,
+            enablePhaseFlow: true,
+            cloudResolution: 32,
+            glowIntensity: 1.0
+        });
+    }
+
     addPoints(points) {
         const positions = this.particles.geometry.attributes.position.array;
         const colors = this.particles.geometry.attributes.color.array;
+        const velocities = [];
         
         points.forEach(point => {
             const idx = this.particleIndex * 3;
@@ -132,6 +155,12 @@ export class Renderer3D {
             positions[idx + 1] = point[1] * 5;
             positions[idx + 2] = point[2] * 5;
             
+            // Calculate velocity for volumetric effects
+            if (this.volumetricEffects) {
+                const velocity = this.volumetricEffects.calculateVelocity(point, 0.19);
+                velocities.push(velocity);
+            }
+            
             // Color based on position (creates gradient effect)
             const intensity = Math.sqrt(point[0] * point[0] + point[1] * point[1] + point[2] * point[2]) / 3;
             colors[idx] = 0.3 + intensity * 0.7;
@@ -140,6 +169,12 @@ export class Renderer3D {
             
             this.particleIndex = (this.particleIndex + 1) % this.config.maxParticles;
         });
+        
+        // Update volumetric effects
+        if (this.volumetricEffects) {
+            this.volumetricEffects.updateDensityField(points);
+            this.volumetricEffects.updateVelocityGlow(points, velocities);
+        }
         
         // Mark for update
         this.particles.geometry.attributes.position.needsUpdate = true;
@@ -152,6 +187,12 @@ export class Renderer3D {
     render() {
         if (this.controls) {
             this.controls.update();
+        }
+        
+        // Animate volumetric effects
+        if (this.volumetricEffects) {
+            const time = performance.now() * 0.001;
+            this.volumetricEffects.animate(time);
         }
         
         this.renderer.render(this.scene, this.camera);
@@ -205,6 +246,10 @@ export class Renderer3D {
         if (this.particles) {
             this.particles.geometry.dispose();
             this.particles.material.dispose();
+        }
+        
+        if (this.volumetricEffects) {
+            this.volumetricEffects.dispose();
         }
         
         if (this.renderer) {
