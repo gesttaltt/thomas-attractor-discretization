@@ -9,11 +9,15 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
-// Configuration
+// Configuration  
+const args = process.argv.slice(2);
+const noBrowserFlag = args.includes('--no-browser');
+const portArg = args.find(arg => !arg.startsWith('--') && !isNaN(arg));
+
 const CONFIG = {
-    port: process.argv[2] || 8080,
+    port: portArg || 8081,
     host: 'localhost',
-    openBrowser: process.argv.includes('--no-browser') ? false : true,
+    openBrowser: !noBrowserFlag,
     serverScript: path.join(__dirname, 'server.js'),
     maxRetries: 10,
     retryDelay: 500
@@ -307,16 +311,16 @@ Thomas Attractor Orchestrator - Usage:
 node start.js [PORT] [OPTIONS]
 
 Arguments:
-  PORT              Server port (default: 8080)
+  PORT              Server port (default: 8081)
 
 Options:
   --no-browser     Don't auto-launch browser
   --help, -h       Show this help message
 
 Examples:
-  node start.js                    # Start on port 8080, open browser
+  node start.js                    # Start on port 8081, open browser
   node start.js 3000              # Start on port 3000, open browser  
-  node start.js 8080 --no-browser # Start on port 8080, no browser
+  node start.js 8081 --no-browser # Start on port 8081, no browser
     `);
 }
 

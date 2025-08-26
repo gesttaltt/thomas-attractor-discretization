@@ -8,7 +8,7 @@
     "dev": "node start.js",
     "serve": "node start.js --no-browser",
     "server": "node server.js",
-    "python": "python -m http.server 8080",
+    "python": "python -m http.server 8081",
     "test": "echo \"Starting Thomas Attractor application...\" && npm start"
   },
   "keywords": [

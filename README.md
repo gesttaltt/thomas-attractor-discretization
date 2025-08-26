@@ -19,7 +19,7 @@ npm start
 
 The **Unified Orchestrator** will automatically:
 1. ✅ Validate all required files  
-2. 🔧 Start the server on port 8080
+2. 🔧 Start the server on port 8081
 3. ⏳ Wait for server to be ready
 4. 🌐 Launch your default browser
 5. 🎯 Open the Thomas Attractor visualization
@@ -37,10 +37,10 @@ npm run dev                # Development mode (same as start)
 
 ### Advanced Orchestrator Options
 ```bash
-node start.js              # Default: port 8080, open browser
+node start.js              # Default: port 8081, open browser
 node start.js 3000         # Custom port 3000, open browser
-node start.js --no-browser # Port 8080, no browser launch
-node start.js 8080 --no-browser  # Custom port, no browser
+node start.js --no-browser # Port 8081, no browser launch
+node start.js 8081 --no-browser  # Custom port, no browser
 node start.js --help       # Show help message
 ```
 
@@ -195,7 +195,7 @@ node --version
 # Verify all files are present
 node start.js --help
 
-# Try alternative port if 8080 is busy
+# Try alternative port if 8081 is busy
 node start.js 3000
 ```
 
@@ -203,7 +203,7 @@ node start.js 3000
 ```bash
 # Start without browser and open manually
 node start.js --no-browser
-# Then open: http://localhost:8080
+# Then open: http://localhost:8081
 ```
 
 ### **Performance Issues**

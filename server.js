@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const PORT = process.argv[2] || 8080;
+const PORT = process.argv[2] || 8081;
 const HOST = 'localhost';
 
 // MIME types for common files
