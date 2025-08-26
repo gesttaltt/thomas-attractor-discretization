@@ -56,15 +56,15 @@ export class VolumetricEffects {
         const size = resolution * resolution * resolution;
         const data = new Float32Array(size * 4);
         
-        // Volumetric cloud material with custom shader
+        // Volumetric cloud material with custom shader - REFINED COLORS
         const cloudMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 densityTexture: { value: null },
                 time: { value: 0 },
-                opacity: { value: 0.3 },
-                colorLow: { value: new THREE.Color(0x0033ff) },
-                colorMid: { value: new THREE.Color(0x00ffff) },
-                colorHigh: { value: new THREE.Color(0xffff00) }
+                opacity: { value: 0.15 },  // Reduced from 0.3 for subtlety
+                colorLow: { value: new THREE.Color(0x000044) },  // Deep blue
+                colorMid: { value: new THREE.Color(0x0066aa) },  // Mid blue
+                colorHigh: { value: new THREE.Color(0x00aaff) }  // Bright cyan
             },
             vertexShader: `
                 varying vec3 vWorldPosition;
@@ -128,12 +128,12 @@ export class VolumetricEffects {
      * 2. VELOCITY GLOW - Brightness based on speed
      */
     createVelocityGlow() {
-        // Create glow sprite material
+        // Create glow sprite material - HARMONIZED COLORS
         const glowMaterial = new THREE.ShaderMaterial({
             uniforms: {
-                color: { value: new THREE.Color(0x00ffff) },
+                color: { value: new THREE.Color(0x88ccff) },  // Softer blue-white
                 viewVector: { value: new THREE.Vector3() },
-                intensity: { value: this.config.glowIntensity }
+                intensity: { value: this.config.glowIntensity * 0.5 }  // Reduced intensity
             },
             vertexShader: `
                 uniform vec3 viewVector;
@@ -174,18 +174,18 @@ export class VolumetricEffects {
      * 3. ENERGY FIELD - Glass-like energy surfaces
      */
     createEnergyField() {
-        // Create parametric surface for energy levels
+        // Create parametric surface for energy levels - MORE SUBTLE
         const energyMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x00ffff,
-            metalness: 0.1,
-            roughness: 0.1,
-            transmission: 0.9,
+            color: 0x4488ff,  // Softer blue instead of cyan
+            metalness: 0.0,   // Less metallic
+            roughness: 0.2,   // Slightly rougher
+            transmission: 0.95,  // More transparent
             transparent: true,
-            opacity: 0.2,
-            thickness: 0.5,
-            envMapIntensity: 1,
-            clearcoat: 1,
-            clearcoatRoughness: 0,
+            opacity: 0.08,    // Much more subtle (was 0.2)
+            thickness: 0.2,   // Thinner
+            envMapIntensity: 0.5,  // Less intense reflections
+            clearcoat: 0.5,   // Reduced clearcoat
+            clearcoatRoughness: 0.1,
             side: THREE.DoubleSide
         });
 
@@ -206,9 +206,9 @@ export class VolumetricEffects {
      */
     createVorticityRibbons() {
         const ribbonMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff00ff,
+            color: 0x6644aa,  // Softer purple (was hot magenta)
             transparent: true,
-            opacity: 0.3,
+            opacity: 0.05,    // Much more subtle (was 0.3)
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending
         });
@@ -241,9 +241,9 @@ export class VolumetricEffects {
      */
     createPhaseFlowLines() {
         const flowMaterial = new THREE.LineBasicMaterial({
-            color: 0x00ff00,
+            color: 0x44aaff,  // Soft cyan instead of green
             transparent: true,
-            opacity: 0.1,
+            opacity: 0.02,    // Very subtle (was 0.1)
             blending: THREE.AdditiveBlending
         });
 

@@ -92,13 +92,13 @@ export class Renderer3D {
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         
-        // Create material
+        // Create material - refined for visual harmony
         const material = new THREE.PointsMaterial({
             size: this.config.particleSize,
             vertexColors: true,
             blending: THREE.AdditiveBlending,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.6,  // Reduced from 0.8 for better balance
             sizeAttenuation: true
         });
         
@@ -161,11 +161,12 @@ export class Renderer3D {
                 velocities.push(velocity);
             }
             
-            // Color based on position (creates gradient effect)
+            // Color based on position (harmonized palette)
             const intensity = Math.sqrt(point[0] * point[0] + point[1] * point[1] + point[2] * point[2]) / 3;
-            colors[idx] = 0.3 + intensity * 0.7;
-            colors[idx + 1] = 0.5 + intensity * 0.5;
-            colors[idx + 2] = 0.9;
+            // Softer blue-to-cyan gradient
+            colors[idx] = 0.2 + intensity * 0.4;      // R: subtle warm tint
+            colors[idx + 1] = 0.4 + intensity * 0.5;  // G: mid range
+            colors[idx + 2] = 0.8 + intensity * 0.2;  // B: dominant blue
             
             this.particleIndex = (this.particleIndex + 1) % this.config.maxParticles;
         });
