@@ -378,3 +378,244 @@ input[type="checkbox"] {
         height: auto;
     }
 }
+
+/* ============================================
+   SOLID Architecture - Modular Controller Styles
+   ============================================ */
+
+/* Initialization Error Display */
+.initialization-error {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.error-content {
+    background: linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 100%);
+    padding: 40px;
+    border-radius: 12px;
+    border: 2px solid #ff6b6b;
+    max-width: 600px;
+    box-shadow: 0 20px 40px rgba(255, 107, 107, 0.3);
+    text-align: center;
+}
+
+.error-content h2 {
+    color: #ff6b6b;
+    margin-bottom: 20px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.error-content p {
+    margin: 15px 0;
+    line-height: 1.6;
+    color: #e0e0e0;
+}
+
+.error-content ul {
+    text-align: left;
+    margin: 15px 0;
+    padding-left: 20px;
+    color: #c0c0c0;
+}
+
+.retry-button {
+    background: linear-gradient(45deg, #4ecdc4, #44a08d);
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 20px 0;
+    transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+    background: linear-gradient(45deg, #44a08d, #4ecdc4);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+}
+
+.error-details {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.error-details summary {
+    color: #4ecdc4;
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.error-details pre {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 6px;
+    font-size: 12px;
+    overflow-x: auto;
+    color: #ff9999;
+    border-left: 4px solid #ff6b6b;
+}
+
+/* HUD Controller Styles */
+.fps-good { color: #4ecdc4 !important; }
+.fps-ok { color: #ffd93d !important; }
+.fps-poor { color: #ff6b6b !important; }
+
+.status-running { 
+    color: #4ecdc4 !important; 
+    text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+}
+.status-paused { 
+    color: #ffd93d !important;
+    text-shadow: 0 0 10px rgba(255, 217, 61, 0.5);
+}
+.status-stopped { color: #c0c0c0 !important; }
+.status-error { 
+    color: #ff6b6b !important;
+    text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    animation: pulse-error 2s infinite;
+}
+
+@keyframes pulse-error {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.ctm-low { color: #ff6b6b !important; }
+.ctm-medium { color: #ffd93d !important; }
+.ctm-high { 
+    color: #4ecdc4 !important; 
+    text-shadow: 0 0 8px rgba(78, 205, 196, 0.4);
+}
+
+/* Simulation Controller Button States */
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(50%);
+}
+
+button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+}
+
+/* Controller Debug Info */
+.controller-debug {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    color: #4ecdc4;
+    min-width: 200px;
+    z-index: 1000;
+    border: 1px solid rgba(78, 205, 196, 0.3);
+}
+
+.controller-debug h4 {
+    margin-bottom: 8px;
+    color: #ffd93d;
+    border-bottom: 1px solid rgba(255, 217, 61, 0.3);
+    padding-bottom: 4px;
+}
+
+.controller-debug .controller-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    padding: 2px 0;
+}
+
+.controller-item .name {
+    color: #e0e0e0;
+}
+
+.controller-item .status.initialized {
+    color: #4ecdc4;
+}
+
+.controller-item .status.error {
+    color: #ff6b6b;
+}
+
+/* Responsive Design for Controllers */
+@media (max-width: 768px) {
+    .error-content {
+        margin: 20px;
+        padding: 30px;
+    }
+    
+    .controller-debug {
+        position: static;
+        margin: 10px;
+        width: calc(100% - 20px);
+    }
+    
+    .retry-button {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
+/* Performance Indicators */
+.performance-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+}
+
+.performance-good {
+    background: #4ecdc4;
+    box-shadow: 0 0 6px rgba(78, 205, 196, 0.6);
+}
+
+.performance-ok {
+    background: #ffd93d;
+    box-shadow: 0 0 6px rgba(255, 217, 61, 0.6);
+}
+
+.performance-poor {
+    background: #ff6b6b;
+    box-shadow: 0 0 6px rgba(255, 107, 107, 0.6);
+}
+
+/* Loading States for Controllers */
+.controller-loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.controller-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(78, 205, 196, 0.3), transparent);
+    animation: loading-sweep 2s infinite;
+}
+
+@keyframes loading-sweep {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}

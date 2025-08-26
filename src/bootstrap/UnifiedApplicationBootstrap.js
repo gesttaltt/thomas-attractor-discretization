@@ -18,6 +18,7 @@ import { AnalyzeChaosUseCase } from '../core/application/usecases/AnalyzeChaosUs
 // Infrastructure
 import { InMemoryAttractorRepository } from '../infrastructure/repositories/InMemoryAttractorRepository.js';
 import { InMemoryLyapunovRepository } from '../infrastructure/repositories/InMemoryLyapunovRepository.js';
+import { InMemoryMetricsRepository } from '../infrastructure/repositories/InMemoryMetricsRepository.js';
 import { PresetRepository } from '../infrastructure/repositories/PresetRepository.js';
 import { ExportAdapter } from '../infrastructure/adapters/ExportAdapter.js';
 
