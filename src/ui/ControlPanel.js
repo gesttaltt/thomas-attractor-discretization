@@ -121,11 +121,11 @@ export class ControlPanel {
         // Add styles if not already present
         this.addStyles();
         
-        // Setup event listeners
-        this.setupEventListeners();
-        
-        // Cache element references
+        // Cache element references FIRST
         this.cacheElements();
+        
+        // Setup event listeners AFTER caching
+        this.setupEventListeners();
     }
 
     addStyles() {
@@ -262,62 +262,90 @@ export class ControlPanel {
     }
 
     setupEventListeners() {
+        // Check if elements were properly cached
+        if (!this.elements || !this.elements.paramB) {
+            console.error('❌ ControlPanel: Elements not properly cached');
+            return;
+        }
+        
         // Parameter controls
-        this.elements.paramB.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            this.elements.bValue.textContent = value.toFixed(3);
-            this.callbacks.onParameterChange({ b: value });
-        });
+        if (this.elements.paramB) {
+            this.elements.paramB.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.elements.bValue.textContent = value.toFixed(3);
+                this.callbacks.onParameterChange({ b: value });
+            });
+        }
         
-        this.elements.paramDt.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            this.elements.dtValue.textContent = value.toFixed(4);
-            this.callbacks.onParameterChange({ dt: value });
-        });
+        if (this.elements.paramDt) {
+            this.elements.paramDt.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.elements.dtValue.textContent = value.toFixed(4);
+                this.callbacks.onParameterChange({ dt: value });
+            });
+        }
         
-        this.elements.particleSize.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            this.elements.sizeValue.textContent = value.toFixed(3);
-            this.callbacks.onParameterChange({ particleSize: value });
-        });
+        if (this.elements.particleSize) {
+            this.elements.particleSize.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.elements.sizeValue.textContent = value.toFixed(3);
+                this.callbacks.onParameterChange({ particleSize: value });
+            });
+        }
         
-        this.elements.projectionPlane.addEventListener('change', (e) => {
-            this.callbacks.onParameterChange({ projectionPlane: e.target.value });
-        });
+        if (this.elements.projectionPlane) {
+            this.elements.projectionPlane.addEventListener('change', (e) => {
+                this.callbacks.onParameterChange({ projectionPlane: e.target.value });
+            });
+        }
         
-        this.elements.autoRotate.addEventListener('change', (e) => {
-            this.callbacks.onParameterChange({ autoRotate: e.target.checked });
-        });
+        if (this.elements.autoRotate) {
+            this.elements.autoRotate.addEventListener('change', (e) => {
+                this.callbacks.onParameterChange({ autoRotate: e.target.checked });
+            });
+        }
         
         // Preset selection
-        this.elements.presetSelect.addEventListener('change', (e) => {
-            if (e.target.value) {
-                this.callbacks.onPresetSelect(e.target.value);
-            }
-        });
+        if (this.elements.presetSelect) {
+            this.elements.presetSelect.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    this.callbacks.onPresetSelect(e.target.value);
+                }
+            });
+        }
         
         // Control buttons
-        this.elements.playPauseBtn.addEventListener('click', () => {
-            this.isPlaying = this.callbacks.onPlayPause();
-            this.elements.playPauseBtn.textContent = this.isPlaying ? '⏸️ Pause' : '▶️ Play';
-        });
+        if (this.elements.playPauseBtn) {
+            this.elements.playPauseBtn.addEventListener('click', () => {
+                this.isPlaying = this.callbacks.onPlayPause();
+                this.elements.playPauseBtn.textContent = this.isPlaying ? '⏸️ Pause' : '▶️ Play';
+            });
+        }
         
-        this.elements.resetBtn.addEventListener('click', () => {
-            this.callbacks.onParameterChange({ reset: true });
-        });
+        if (this.elements.resetBtn) {
+            this.elements.resetBtn.addEventListener('click', () => {
+                this.callbacks.onParameterChange({ reset: true });
+            });
+        }
         
         // Export buttons
-        this.elements.exportImageBtn.addEventListener('click', () => {
-            this.callbacks.onExport('image');
-        });
+        if (this.elements.exportImageBtn) {
+            this.elements.exportImageBtn.addEventListener('click', () => {
+                this.callbacks.onExport('image');
+            });
+        }
         
-        this.elements.exportDataBtn.addEventListener('click', () => {
-            this.callbacks.onExport('data');
-        });
+        if (this.elements.exportDataBtn) {
+            this.elements.exportDataBtn.addEventListener('click', () => {
+                this.callbacks.onExport('data');
+            });
+        }
         
-        this.elements.shareUrlBtn.addEventListener('click', () => {
-            this.callbacks.onExport('url');
-        });
+        if (this.elements.shareUrlBtn) {
+            this.elements.shareUrlBtn.addEventListener('click', () => {
+                this.callbacks.onExport('url');
+            });
+        }
     }
 
     setParameters(params) {
