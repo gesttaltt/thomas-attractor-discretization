@@ -15,7 +15,7 @@ export class PresetManager {
      */
     async loadPresets() {
         try {
-            const response = await fetch('./data/presets.json');
+            const response = await fetch('/data/presets.json');
             const data = await response.json();
             
             // Store each preset

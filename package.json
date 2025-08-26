@@ -2,12 +2,14 @@
   "name": "thomas-attractor-visualizer",
   "version": "2.0.0",
   "description": "Interactive Thomas Attractor visualization with chaos analysis and floral projections",
-  "main": "server.js",
+  "main": "start.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "serve": "python -m http.server 8080",
-    "test": "echo \"Open http://localhost:8080 in your browser\" && npm start"
+    "start": "node start.js",
+    "dev": "node start.js",
+    "serve": "node start.js --no-browser",
+    "server": "node server.js",
+    "python": "python -m http.server 8080",
+    "test": "echo \"Starting Thomas Attractor application...\" && npm start"
   },
   "keywords": [
     "thomas-attractor",

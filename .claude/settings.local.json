@@ -16,7 +16,10 @@
       "Bash(sed:*)",
       "Bash(start chrome:*)",
       "Bash(tree:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(find:*)",
+      "Bash(chmod:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": [],
