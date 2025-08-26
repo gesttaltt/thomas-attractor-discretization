@@ -19,6 +19,7 @@ export class ThomasAttractorApp {
             controlsContainer: config.controlsContainer || document.getElementById('controls'),
             maxParticles: config.maxParticles || 50000,
             targetFPS: config.targetFPS || 60,
+            stepsPerFrame: config.stepsPerFrame || 100,  // Control trajectory speed
             defaultB: config.defaultB || 0.19,
             defaultDt: config.defaultDt || 0.005,
             ...config
@@ -214,11 +215,11 @@ export class ThomasAttractorApp {
         const now = performance.now();
         const deltaTime = now - this.lastTime;
         
-        // Limit frame rate
-        if (deltaTime < (1000 / this.config.targetFPS)) return;
+        // Remove frame rate limiting for maximum speed
+        // if (deltaTime < (1000 / this.config.targetFPS)) return;
         
-        // Step the simulation
-        const points = this.attractor.step(10);
+        // Step the simulation - configurable speed for faster trajectory
+        const points = this.attractor.step(this.config.stepsPerFrame);
         
         // Update 3D visualization
         if (this.renderer3D) {
@@ -232,9 +233,9 @@ export class ThomasAttractorApp {
             this.floralProjection.render();
         }
         
-        // Update chaos metrics periodically (every 60 frames)
+        // Update chaos metrics periodically (every 120 frames - adjusted for speed)
         this.frameCount++;
-        if (this.frameCount % 60 === 0) {
+        if (this.frameCount % 120 === 0) {
             this.updateMetrics();
         }
         
