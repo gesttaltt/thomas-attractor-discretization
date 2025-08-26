@@ -1,0 +1,37 @@
+{
+  "name": "thomas-attractor-visualizer",
+  "version": "2.0.0",
+  "description": "Interactive Thomas Attractor visualization with chaos analysis and floral projections",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "serve": "python -m http.server 8080",
+    "test": "echo \"Open http://localhost:8080 in your browser\" && npm start"
+  },
+  "keywords": [
+    "thomas-attractor",
+    "chaos-theory",
+    "visualization",
+    "webgl",
+    "three.js",
+    "floral-projection",
+    "lyapunov-exponent"
+  ],
+  "author": "Thomas Attractor Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/thomas-attractor.git"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "browserslist": [
+    "last 2 versions",
+    "not dead",
+    "> 0.2%"
+  ]
+}

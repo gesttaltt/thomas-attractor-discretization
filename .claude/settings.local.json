@@ -8,9 +8,20 @@
       "Bash(git add:*)",
       "Bash(git push:*)",
       "Bash(python:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Read(/C:\\C:\\Users\\Gestalt\\Desktop/**)",
+      "Read(/C:\\C:\\Users\\Gestalt\\Desktop/**)",
+      "Bash(sed:*)",
+      "Bash(start chrome:*)",
+      "Bash(tree:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\c\\Users\\Gestalt\\Desktop"
+    ]
   }
 }

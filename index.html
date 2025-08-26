@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thomas Attractor - Simplified Architecture</title>
+    <meta name="description" content="Interactive Thomas Attractor visualization with simplified, clean architecture">
+    
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            grid-template-rows: 1fr 250px;
+            grid-template-areas: 
+                "main controls"
+                "floral controls";
+        }
+
+        .main-container {
+            grid-area: main;
+            position: relative;
+            background: linear-gradient(45deg, #000011 0%, #001133 100%);
+            border-right: 1px solid rgba(100, 181, 246, 0.2);
+        }
+
+        #mainCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            display: block;
+        }
+
+        #mainCanvas:active {
+            cursor: grabbing;
+        }
+
+        .floral-container {
+            grid-area: floral;
+            background: rgba(15, 15, 25, 0.95);
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            border-right: none;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .floral-header {
+            padding: 10px 15px;
+            background: rgba(100, 181, 246, 0.1);
+            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
+            font-size: 14px;
+            font-weight: 600;
+            color: #64b5f6;
+        }
+
+        #floralCanvas {
+            flex: 1;
+            width: 100%;
+            background: transparent;
+        }
+
+        .controls-container {
+            grid-area: controls;
+            background: rgba(15, 15, 25, 0.98);
+            backdrop-filter: blur(15px);
+            border-left: 1px solid rgba(100, 181, 246, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        /* Loading indicator */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #64b5f6;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #64b5f6;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error display */
+        .error {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff6b6b;
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 1001;
+            display: none;
+        }
+
+        /* Success notification */
+        .success {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: #4ade80;
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 1001;
+            display: none;
+            animation: fadeInOut 3s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            body {
+                grid-template-columns: 1fr 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+                grid-template-areas: 
+                    "main"
+                    "controls";
+            }
+            
+            .floral-container {
+                display: none;
+            }
+            
+            .controls-container {
+                max-height: 300px;
+            }
+        }
+
+        /* Keyboard shortcuts help */
+        .shortcuts {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .shortcuts:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading indicator -->
+    <div class="loading" id="loading">
+        Initializing Thomas Attractor...
+    </div>
+
+    <!-- Error display -->
+    <div class="error" id="error"></div>
+
+    <!-- Success notification -->
+    <div class="success" id="success"></div>
+
+    <!-- Main 3D visualization -->
+    <div class="main-container">
+        <canvas id="mainCanvas"></canvas>
+        
+        <!-- Keyboard shortcuts help -->
+        <div class="shortcuts">
+            <strong>Shortcuts:</strong><br>
+            Space: Play/Pause<br>
+            R: Reset<br>
+            E: Export Image<br>
+            S: Share URL
+        </div>
+    </div>
+
+    <!-- Floral projection -->
+    <div class="floral-container">
+        <div class="floral-header">
+            🌸 Floral Projection
+        </div>
+        <canvas id="floralCanvas"></canvas>
+    </div>
+
+    <!-- Control panel -->
+    <div class="controls-container" id="controls">
+        <!-- Controls will be generated by ControlPanel.js -->
+    </div>
+
+    <!-- Application script -->
+    <script type="module">
+        // Import the simplified application
+        import { ThomasAttractorApp } from './src/app.js';
+
+        // Global error handling
+        window.addEventListener('error', (event) => {
+            console.error('Application error:', event.error);
+            showError(`Error: ${event.error.message}`);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            showError(`Promise rejection: ${event.reason}`);
+        });
+
+        // Notification functions
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            setTimeout(() => {
+                successEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Initialize application when DOM is ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                console.log('🚀 Starting Thomas Attractor Application...');
+                
+                // Hide loading indicator
+                document.getElementById('loading').style.display = 'none';
+                
+                // Create application instance
+                window.thomasApp = new ThomasAttractorApp({
+                    mainCanvas: document.getElementById('mainCanvas'),
+                    floralCanvas: document.getElementById('floralCanvas'),
+                    controlsContainer: document.getElementById('controls'),
+                    
+                    // Configuration
+                    maxParticles: 50000,
+                    targetFPS: 60,
+                    defaultB: 0.19,
+                    defaultDt: 0.005
+                });
+
+                // Show success message
+                showSuccess('✅ Application initialized successfully');
+                
+                console.log('✅ Thomas Attractor Application ready');
+                
+                // Expose for debugging
+                window.showError = showError;
+                window.showSuccess = showSuccess;
+
+            } catch (error) {
+                console.error('❌ Failed to initialize application:', error);
+                showError(`Initialization failed: ${error.message}`);
+                
+                // Hide loading indicator even on error
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.thomasApp) {
+                // Trigger resize handling in the app
+                setTimeout(() => {
+                    const event = new Event('resize');
+                    window.dispatchEvent(event);
+                }, 100);
+            }
+        });
+
+        // Performance monitoring
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        function monitorPerformance() {
+            frameCount++;
+            const now = performance.now();
+            
+            if (frameCount % 300 === 0) { // Every ~5 seconds
+                const fps = 1000 / (now - lastTime);
+                console.log(`🎯 Performance: ${fps.toFixed(1)} FPS`);
+                
+                if (fps < 20) {
+                    console.warn('⚠️ Low performance detected');
+                }
+                
+                lastTime = now;
+                frameCount = 0;
+            }
+            
+            requestAnimationFrame(monitorPerformance);
+        }
+
+        // Start performance monitoring
+        monitorPerformance();
+    </script>
+</body>
+</html>

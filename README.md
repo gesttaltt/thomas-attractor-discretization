@@ -1,20 +1,38 @@
 # Thomas Flower Interactive Visualizer
 
-An interactive web-based visualization tool for exploring the Thomas attractor with floral projections and rhodonea curve overlays. This implementation reveals the hidden "flower-like" patterns in chaotic dynamics through specialized projections and metrics.
+An interactive web-based visualization tool for exploring the Thomas attractor with floral projections and rhodonea curve overlays. This implementation reveals the hidden "flower-like" patterns in chaotic dynamics through specialized projections and mathematical analysis.
 
-## Features
+## Quick Start
 
-- **3D Thomas Attractor Visualization**: Real-time particle-based rendering of the chaotic attractor
-- **Thomas Chaos Meter (CTM)**: Advanced chaos quantification based on Lyapunov exponents and Kaplan-Yorke dimension
-- **Floral Projection Panel**: 2D polar projection showing the attractor's radial patterns
-- **Rhodonea Overlay**: Mathematical rose curve fitting to quantify floral structure
-- **Flower Index (FI)**: Novel metric combining radial error and Lyapunov exponent
-- **Lyapunov Exponent Calculation**: Real-time computation using QR decomposition (Benettin method)
-- **Parameter Sweep Analysis**: Explore chaos behavior across parameter space with automatic critical point detection
-- **Bootstrap Confidence Intervals**: Statistical uncertainty quantification for all metrics
-- **Multiple Presets**: Pre-configured parameter sets for different projections and chaos regimes
-- **Interactive Controls**: Adjust parameters, opacity, and visualization modes in real-time
-- **Export Capabilities**: Save visualizations as PNG, parameter data as JSON, or sweep results as CSV/MATLAB
+```bash
+# Start local server
+python server.py
+# Or use Node.js
+npx http-server -p 8002
+
+# Navigate to
+http://localhost:8002
+```
+
+## Key Features
+
+- **3D Thomas Attractor**: Real-time GPU-accelerated particle visualization (100K+ particles)
+- **Thomas Chaos Meter (CTM)**: Advanced chaos quantification based on Lyapunov exponents
+- **Floral Projections**: 2D polar projections revealing hidden rose-like patterns
+- **Flower Index (FI)**: Novel metric combining geometric fit with dynamical chaos
+- **Clean Architecture**: SOLID principles with hexagonal design
+- **Export System**: Multiple formats (PNG, JSON, CSV, PLY, OBJ)
+- **Mathematical Rigor**: Bootstrap confidence intervals and statistical validation
+
+## Documentation
+
+📚 **Complete documentation available in [`docs/`](./docs/README.md)**
+
+### Quick Links
+- [**User Guide**](./docs/user-guide.md) - How to use the application
+- [**Architecture Overview**](./docs/architecture/overview.md) - System design
+- [**Mathematical Theory**](./docs/mathematical/) - CTM and FI theory
+- [**Development Setup**](./docs/development/setup.md) - Getting started with development
 
 ## Quick Start
 
@@ -23,13 +41,17 @@ An interactive web-based visualization tool for exploring the Thomas attractor w
 1. Clone or download this repository
 2. Start a local web server in the project directory:
    ```bash
-   python -m http.server 8000
+   python -m http.server 8002
    ```
    Or using Node.js:
    ```bash
-   npx http-server
+   npx http-server -p 8002
    ```
-3. Open your browser and navigate to `http://localhost:8000`
+   Or use the provided server script:
+   ```bash
+   python server.py
+   ```
+3. Open your browser and navigate to `http://localhost:8002`
 4. The visualizer will load with the default "canonical_xy" preset
 
 ### Direct File Access

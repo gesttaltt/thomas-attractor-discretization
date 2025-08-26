@@ -16,13 +16,16 @@ Simply open `index.html` in your web browser
 #### Option 2: Local Server (Recommended)
 ```bash
 # Using Python
-python -m http.server 8000
+python -m http.server 8002
 
 # Using Node.js
-npx http-server
+npx http-server -p 8002
+
+# Or use the provided server script
+python server.py
 
 # Then navigate to
-http://localhost:8000
+http://localhost:8002
 ```
 
 ### First Steps
