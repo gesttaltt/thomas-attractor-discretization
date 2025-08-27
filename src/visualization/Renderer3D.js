@@ -16,7 +16,7 @@ export class Renderer3D {
             cameraDistance: config.cameraDistance || 20,
             backgroundColor: config.backgroundColor || 0x000011,
             particleColor: config.particleColor || 0x64b5f6,
-            enableVolumetricEffects: config.enableVolumetricEffects !== false,
+            enableVolumetricEffects: config.enableVolumetricEffects === true,  // Disabled by default
             ...config
         };
 
@@ -96,9 +96,9 @@ export class Renderer3D {
         const material = new THREE.PointsMaterial({
             size: this.config.particleSize,
             vertexColors: true,
-            blending: THREE.AdditiveBlending,
+            blending: THREE.NormalBlending,  // Normal blending to avoid dark halos
             transparent: true,
-            opacity: 0.6,  // Reduced from 0.8 for better balance
+            opacity: 0.85,  // Higher opacity for clearer particles
             sizeAttenuation: true
         });
         
@@ -131,6 +131,9 @@ export class Renderer3D {
     }
 
     setupVolumetricEffects() {
+        if (this.volumetricEffects) {
+            this.volumetricEffects.dispose();
+        }
         this.volumetricEffects = new VolumetricEffects(this.scene, {
             enableDensityClouds: true,
             enableVelocityGlow: true,

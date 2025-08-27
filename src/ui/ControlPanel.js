@@ -10,7 +10,8 @@ export class ControlPanel {
             onParameterChange: config.onParameterChange || (() => {}),
             onPresetSelect: config.onPresetSelect || (() => {}),
             onExport: config.onExport || (() => {}),
-            onPlayPause: config.onPlayPause || (() => {})
+            onPlayPause: config.onPlayPause || (() => {}),
+            onVolumetricChange: config.onVolumetricChange || (() => {})
         };
         
         this.elements = {};
@@ -65,6 +66,79 @@ export class ControlPanel {
                             <label>
                                 <input type="checkbox" id="auto-rotate" checked> Auto Rotate
                             </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Volumetric Effects -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">✨ Volumetric Effects</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="enable-volumetric"> Enable Volumetric Effects
+                            </label>
+                        </div>
+                        <div class="volumetric-controls">
+                            <div class="control-group">
+                                <label>
+                                    <input type="checkbox" id="density-clouds"> Density Clouds
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label>
+                                    <input type="checkbox" id="velocity-glow"> Velocity Glow
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label>
+                                    <input type="checkbox" id="energy-field"> Energy Field
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label>
+                                    <input type="checkbox" id="vorticity-ribbons"> Vorticity Ribbons
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label>
+                                    <input type="checkbox" id="phase-flow"> Phase Flow Lines
+                                </label>
+                            </div>
+                        </div>
+                        <div class="opacity-controls">
+                            <div class="control-group">
+                                <label for="clouds-opacity">Clouds Opacity: <span id="clouds-opacity-value">0.03</span></label>
+                                <input type="range" id="clouds-opacity" min="0" max="1" step="0.01" value="0.03">
+                            </div>
+                            <div class="control-group">
+                                <label for="glow-opacity">Glow Intensity: <span id="glow-opacity-value">0.2</span></label>
+                                <input type="range" id="glow-opacity" min="0" max="2" step="0.1" value="0.2">
+                            </div>
+                            <div class="control-group">
+                                <label for="energy-opacity">Energy Opacity: <span id="energy-opacity-value">0.02</span></label>
+                                <input type="range" id="energy-opacity" min="0" max="1" step="0.01" value="0.02">
+                            </div>
+                        </div>
+                        <div class="color-controls">
+                            <div class="control-group">
+                                <label for="particle-color">Particle Color:</label>
+                                <input type="color" id="particle-color" value="#64b5f6">
+                            </div>
+                            <div class="control-group">
+                                <label for="clouds-color">Clouds Color:</label>
+                                <input type="color" id="clouds-color" value="#0066aa">
+                            </div>
+                            <div class="control-group">
+                                <label for="energy-color">Energy Color:</label>
+                                <input type="color" id="energy-color" value="#4488ff">
+                            </div>
+                            <div class="control-group">
+                                <label for="glow-color">Glow Color:</label>
+                                <input type="color" id="glow-color" value="#88ccff">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -232,6 +306,39 @@ export class ControlPanel {
             .full-width {
                 width: 100%;
             }
+            
+            .volumetric-controls {
+                margin: 10px 0;
+                padding: 10px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 4px;
+                border: 1px solid rgba(100, 181, 246, 0.1);
+            }
+            
+            .volumetric-controls .control-group {
+                margin-bottom: 8px;
+            }
+            
+            .opacity-controls {
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid rgba(100, 181, 246, 0.2);
+            }
+            
+            .color-controls {
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid rgba(100, 181, 246, 0.2);
+            }
+            
+            .color-controls input[type="color"] {
+                width: 50px;
+                height: 30px;
+                border: 1px solid rgba(100, 181, 246, 0.3);
+                border-radius: 4px;
+                cursor: pointer;
+                background: rgba(0, 0, 0, 0.3);
+            }
         `;
         
         document.head.appendChild(style);
@@ -251,10 +358,30 @@ export class ControlPanel {
             exportDataBtn: document.getElementById('export-data-btn'),
             shareUrlBtn: document.getElementById('share-url-btn'),
             
+            // Volumetric controls
+            enableVolumetric: document.getElementById('enable-volumetric'),
+            densityClouds: document.getElementById('density-clouds'),
+            velocityGlow: document.getElementById('velocity-glow'),
+            energyField: document.getElementById('energy-field'),
+            vorticityRibbons: document.getElementById('vorticity-ribbons'),
+            phaseFlow: document.getElementById('phase-flow'),
+            cloudsOpacity: document.getElementById('clouds-opacity'),
+            glowOpacity: document.getElementById('glow-opacity'),
+            energyOpacity: document.getElementById('energy-opacity'),
+            
+            // Color pickers
+            particleColor: document.getElementById('particle-color'),
+            cloudsColor: document.getElementById('clouds-color'),
+            energyColor: document.getElementById('energy-color'),
+            glowColor: document.getElementById('glow-color'),
+            
             // Value displays
             bValue: document.getElementById('b-value'),
             dtValue: document.getElementById('dt-value'),
             sizeValue: document.getElementById('size-value'),
+            cloudsOpacityValue: document.getElementById('clouds-opacity-value'),
+            glowOpacityValue: document.getElementById('glow-opacity-value'),
+            energyOpacityValue: document.getElementById('energy-opacity-value'),
             lyapunovValue: document.getElementById('lyapunov-value'),
             ctmValue: document.getElementById('ctm-value'),
             dimensionValue: document.getElementById('dimension-value')
@@ -344,6 +471,93 @@ export class ControlPanel {
         if (this.elements.shareUrlBtn) {
             this.elements.shareUrlBtn.addEventListener('click', () => {
                 this.callbacks.onExport('url');
+            });
+        }
+        
+        // Volumetric effects controls
+        if (this.elements.enableVolumetric) {
+            this.elements.enableVolumetric.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ enableVolumetric: e.target.checked });
+            });
+        }
+        
+        if (this.elements.densityClouds) {
+            this.elements.densityClouds.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ densityClouds: e.target.checked });
+            });
+        }
+        
+        if (this.elements.velocityGlow) {
+            this.elements.velocityGlow.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ velocityGlow: e.target.checked });
+            });
+        }
+        
+        if (this.elements.energyField) {
+            this.elements.energyField.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ energyField: e.target.checked });
+            });
+        }
+        
+        if (this.elements.vorticityRibbons) {
+            this.elements.vorticityRibbons.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ vorticityRibbons: e.target.checked });
+            });
+        }
+        
+        if (this.elements.phaseFlow) {
+            this.elements.phaseFlow.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ phaseFlow: e.target.checked });
+            });
+        }
+        
+        // Opacity sliders
+        if (this.elements.cloudsOpacity) {
+            this.elements.cloudsOpacity.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.elements.cloudsOpacityValue.textContent = value.toFixed(2);
+                this.callbacks.onVolumetricChange({ cloudsOpacity: value });
+            });
+        }
+        
+        if (this.elements.glowOpacity) {
+            this.elements.glowOpacity.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.elements.glowOpacityValue.textContent = value.toFixed(1);
+                this.callbacks.onVolumetricChange({ glowOpacity: value });
+            });
+        }
+        
+        if (this.elements.energyOpacity) {
+            this.elements.energyOpacity.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.elements.energyOpacityValue.textContent = value.toFixed(2);
+                this.callbacks.onVolumetricChange({ energyOpacity: value });
+            });
+        }
+        
+        // Color pickers
+        if (this.elements.particleColor) {
+            this.elements.particleColor.addEventListener('change', (e) => {
+                this.callbacks.onParameterChange({ particleColor: e.target.value });
+            });
+        }
+        
+        if (this.elements.cloudsColor) {
+            this.elements.cloudsColor.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ cloudsColor: e.target.value });
+            });
+        }
+        
+        if (this.elements.energyColor) {
+            this.elements.energyColor.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ energyColor: e.target.value });
+            });
+        }
+        
+        if (this.elements.glowColor) {
+            this.elements.glowColor.addEventListener('change', (e) => {
+                this.callbacks.onVolumetricChange({ glowColor: e.target.value });
             });
         }
     }

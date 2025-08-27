@@ -55,7 +55,8 @@ export class ThomasAttractorApp {
                 this.renderer3D = new Renderer3D(this.config.mainCanvas, {
                     maxParticles: this.config.maxParticles,
                     particleSize: 0.012,
-                    autoRotate: true
+                    autoRotate: true,
+                    enableVolumetricEffects: this.config.enableVolumetricEffects
                 });
             }
             
@@ -73,7 +74,8 @@ export class ThomasAttractorApp {
                     onParameterChange: this.handleParameterChange.bind(this),
                     onPresetSelect: this.handlePresetSelect.bind(this),
                     onExport: this.handleExport.bind(this),
-                    onPlayPause: this.toggleSimulation.bind(this)
+                    onPlayPause: this.toggleSimulation.bind(this),
+                    onVolumetricChange: this.handleVolumetricChange.bind(this)
                 });
                 
                 // Initialize controls with default values
@@ -118,10 +120,108 @@ export class ThomasAttractorApp {
             if (params.autoRotate !== undefined) {
                 this.renderer3D.setAutoRotate(params.autoRotate);
             }
+            if (params.particleColor !== undefined) {
+                const color = new THREE.Color(params.particleColor);
+                this.renderer3D.particles.material.color = color;
+            }
         }
         
         if (this.floralProjection && params.projectionPlane) {
             this.floralProjection.setProjectionPlane(params.projectionPlane);
+        }
+        
+        // Handle reset
+        if (params.reset) {
+            this.attractor.reset();
+            if (this.renderer3D) this.renderer3D.clear();
+            if (this.floralProjection) this.floralProjection.clear();
+        }
+    }
+
+    handleVolumetricChange(params) {
+        console.log('Volumetric change:', params);
+        if (!this.renderer3D) return;
+        
+        // Toggle main volumetric effects
+        if (params.enableVolumetric !== undefined) {
+            this.renderer3D.config.enableVolumetricEffects = params.enableVolumetric;
+            if (params.enableVolumetric && !this.renderer3D.volumetricEffects) {
+                this.renderer3D.setupVolumetricEffects();
+            } else if (!params.enableVolumetric && this.renderer3D.volumetricEffects) {
+                this.renderer3D.volumetricEffects.dispose();
+                this.renderer3D.volumetricEffects = null;
+                return; // Exit early if disabling
+            }
+        }
+        
+        const effects = this.renderer3D.volumetricEffects;
+        if (effects && effects.config) {
+            // Toggle specific effects
+            if (params.densityClouds !== undefined) {
+                effects.config.enableDensityClouds = params.densityClouds;
+                if (effects.effects.densityClouds) {
+                    effects.effects.densityClouds.mesh.visible = params.densityClouds;
+                }
+            }
+            
+            if (params.velocityGlow !== undefined) {
+                effects.config.enableVelocityGlow = params.velocityGlow;
+                if (effects.effects.velocityGlow) {
+                    effects.effects.velocityGlow.mesh.visible = params.velocityGlow;
+                }
+            }
+            
+            if (params.energyField !== undefined) {
+                effects.config.enableEnergyField = params.energyField;
+                if (effects.effects.energyField) {
+                    effects.effects.energyField.mesh.visible = params.energyField;
+                }
+            }
+            
+            if (params.vorticityRibbons !== undefined) {
+                effects.config.enableVorticity = params.vorticityRibbons;
+                if (effects.effects.vorticityRibbons) {
+                    effects.effects.vorticityRibbons.mesh.visible = params.vorticityRibbons;
+                }
+            }
+            
+            if (params.phaseFlow !== undefined) {
+                effects.config.enablePhaseFlow = params.phaseFlow;
+                if (effects.effects.phaseFlowLines) {
+                    effects.effects.phaseFlowLines.lines.forEach(line => {
+                        line.visible = params.phaseFlow;
+                    });
+                }
+            }
+            
+            // Update opacity values
+            if (params.cloudsOpacity !== undefined && effects.effects.densityClouds) {
+                effects.effects.densityClouds.material.uniforms.opacity.value = params.cloudsOpacity;
+            }
+            
+            if (params.glowOpacity !== undefined && effects.effects.velocityGlow) {
+                effects.effects.velocityGlow.material.uniforms.intensity.value = params.glowOpacity;
+            }
+            
+            if (params.energyOpacity !== undefined && effects.effects.energyField) {
+                effects.effects.energyField.material.opacity = params.energyOpacity;
+            }
+            
+            // Update colors
+            if (params.cloudsColor !== undefined && effects.effects.densityClouds) {
+                const color = new THREE.Color(params.cloudsColor);
+                effects.effects.densityClouds.material.uniforms.colorMid.value = color;
+            }
+            
+            if (params.energyColor !== undefined && effects.effects.energyField) {
+                const color = new THREE.Color(params.energyColor);
+                effects.effects.energyField.material.color = color;
+            }
+            
+            if (params.glowColor !== undefined && effects.effects.velocityGlow) {
+                const color = new THREE.Color(params.glowColor);
+                effects.effects.velocityGlow.material.uniforms.color.value = color;
+            }
         }
     }
 

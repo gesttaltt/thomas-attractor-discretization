@@ -61,7 +61,7 @@ export class VolumetricEffects {
             uniforms: {
                 densityTexture: { value: null },
                 time: { value: 0 },
-                opacity: { value: 0.15 },  // Reduced from 0.3 for subtlety
+                opacity: { value: 0.03 },  // Much more subtle for ghost-like effect
                 colorLow: { value: new THREE.Color(0x000044) },  // Deep blue
                 colorMid: { value: new THREE.Color(0x0066aa) },  // Mid blue
                 colorHigh: { value: new THREE.Color(0x00aaff) }  // Bright cyan
@@ -108,8 +108,9 @@ export class VolumetricEffects {
                 }
             `,
             transparent: true,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
+            blending: THREE.NormalBlending,  // Changed from additive to prevent dark envelope
+            depthWrite: false,
+            depthTest: true
         });
 
         // Create cloud geometry (box that encompasses attractor)
@@ -133,7 +134,7 @@ export class VolumetricEffects {
             uniforms: {
                 color: { value: new THREE.Color(0x88ccff) },  // Softer blue-white
                 viewVector: { value: new THREE.Vector3() },
-                intensity: { value: this.config.glowIntensity * 0.5 }  // Reduced intensity
+                intensity: { value: this.config.glowIntensity * 0.2 }  // Much softer glow
             },
             vertexShader: `
                 uniform vec3 viewVector;
@@ -181,7 +182,7 @@ export class VolumetricEffects {
             roughness: 0.2,   // Slightly rougher
             transmission: 0.95,  // More transparent
             transparent: true,
-            opacity: 0.08,    // Much more subtle (was 0.2)
+            opacity: 0.02,    // Almost invisible glass effect
             thickness: 0.2,   // Thinner
             envMapIntensity: 0.5,  // Less intense reflections
             clearcoat: 0.5,   // Reduced clearcoat
@@ -208,7 +209,7 @@ export class VolumetricEffects {
         const ribbonMaterial = new THREE.MeshBasicMaterial({
             color: 0x6644aa,  // Softer purple (was hot magenta)
             transparent: true,
-            opacity: 0.05,    // Much more subtle (was 0.3)
+            opacity: 0.01,    // Extremely subtle ribbons
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending
         });
@@ -243,7 +244,7 @@ export class VolumetricEffects {
         const flowMaterial = new THREE.LineBasicMaterial({
             color: 0x44aaff,  // Soft cyan instead of green
             transparent: true,
-            opacity: 0.02,    // Very subtle (was 0.1)
+            opacity: 0.005,   // Ghost-like flow lines
             blending: THREE.AdditiveBlending
         });
 

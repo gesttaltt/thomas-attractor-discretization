@@ -57,6 +57,28 @@
             position: relative;
             display: flex;
             flex-direction: column;
+            min-height: 0; /* Fix flexbox overflow */
+            transition: all 0.3s ease;
+        }
+
+        .floral-container.collapsed {
+            height: 40px;
+            overflow: hidden;
+        }
+
+        .floral-container.detached {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            height: 300px;
+            z-index: 1000;
+            border: 2px solid rgba(100, 181, 246, 0.5);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            resize: both;
+            overflow: auto;
         }
 
         .floral-header {
@@ -66,12 +88,43 @@
             font-size: 14px;
             font-weight: 600;
             color: #64b5f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .floral-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .floral-control-btn {
+            background: rgba(100, 181, 246, 0.2);
+            border: 1px solid rgba(100, 181, 246, 0.4);
+            color: #64b5f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .floral-control-btn:hover {
+            background: rgba(100, 181, 246, 0.3);
+            border-color: rgba(100, 181, 246, 0.6);
         }
 
         #floralCanvas {
             flex: 1;
             width: 100%;
             background: transparent;
+            min-height: 0;
+        }
+
+        .floral-container.collapsed #floralCanvas {
+            display: none;
         }
 
         .controls-container {
@@ -150,6 +203,11 @@
             body {
                 grid-template-columns: 1fr 300px;
             }
+            
+            .floral-container.detached {
+                width: 300px;
+                height: 250px;
+            }
         }
 
         @media (max-width: 768px) {
@@ -163,6 +221,14 @@
             
             .floral-container {
                 display: none;
+            }
+            
+            .floral-container.detached {
+                display: flex;
+                width: 250px;
+                height: 200px;
+                top: 10px;
+                right: 10px;
             }
             
             .controls-container {
@@ -215,9 +281,13 @@
     </div>
 
     <!-- Floral projection -->
-    <div class="floral-container">
-        <div class="floral-header">
-            🌸 Floral Projection
+    <div class="floral-container" id="floralContainer">
+        <div class="floral-header" id="floralHeader">
+            <span>🌸 Floral Projection</span>
+            <div class="floral-controls">
+                <button class="floral-control-btn" id="collapseBtn" title="Collapse/Expand">_</button>
+                <button class="floral-control-btn" id="detachBtn" title="Detach/Attach">⇱</button>
+            </div>
         </div>
         <canvas id="floralCanvas"></canvas>
     </div>
@@ -262,6 +332,92 @@
             }, 3000);
         }
 
+        // Floral container controls
+        function setupFloralControls() {
+            const floralContainer = document.getElementById('floralContainer');
+            const floralHeader = document.getElementById('floralHeader');
+            const collapseBtn = document.getElementById('collapseBtn');
+            const detachBtn = document.getElementById('detachBtn');
+            let isCollapsed = false;
+            let isDetached = false;
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            
+            // Collapse/Expand functionality
+            collapseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isCollapsed = !isCollapsed;
+                floralContainer.classList.toggle('collapsed', isCollapsed);
+                collapseBtn.textContent = isCollapsed ? '▣' : '_';
+                collapseBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+            });
+            
+            // Detach/Attach functionality
+            detachBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isDetached = !isDetached;
+                floralContainer.classList.toggle('detached', isDetached);
+                detachBtn.textContent = isDetached ? '⇲' : '⇱';
+                detachBtn.title = isDetached ? 'Attach' : 'Detach';
+                
+                // Reset collapse state when detaching
+                if (isDetached) {
+                    isCollapsed = false;
+                    floralContainer.classList.remove('collapsed');
+                    collapseBtn.textContent = '_';
+                    collapseBtn.title = 'Collapse';
+                }
+                
+                // Trigger canvas resize after DOM changes
+                setTimeout(() => {
+                    if (window.thomasApp && window.thomasApp.floralProjection) {
+                        window.thomasApp.floralProjection.handleResize();
+                    }
+                }, 100);
+            });
+            
+            // Dragging functionality for detached window
+            floralHeader.addEventListener('mousedown', (e) => {
+                if (isDetached && !e.target.classList.contains('floral-control-btn')) {
+                    isDragging = true;
+                    dragOffset.x = e.clientX - floralContainer.offsetLeft;
+                    dragOffset.y = e.clientY - floralContainer.offsetTop;
+                    floralHeader.style.cursor = 'move';
+                    e.preventDefault();
+                }
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging && isDetached) {
+                    const newX = e.clientX - dragOffset.x;
+                    const newY = e.clientY - dragOffset.y;
+                    
+                    // Keep within viewport bounds
+                    const maxX = window.innerWidth - floralContainer.offsetWidth;
+                    const maxY = window.innerHeight - floralContainer.offsetHeight;
+                    
+                    floralContainer.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+                    floralContainer.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+                    floralContainer.style.right = 'auto';
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    floralHeader.style.cursor = 'pointer';
+                }
+            });
+            
+            // Header click toggles collapse (except when detached or clicking controls)
+            floralHeader.addEventListener('click', (e) => {
+                if (!isDetached && !e.target.classList.contains('floral-control-btn') && 
+                    (e.target === floralHeader || e.target.tagName === 'SPAN')) {
+                    collapseBtn.click();
+                }
+            });
+        }
+
         // Initialize application when DOM is ready
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -269,6 +425,9 @@
                 
                 // Hide loading indicator
                 document.getElementById('loading').style.display = 'none';
+                
+                // Setup floral controls first
+                setupFloralControls();
                 
                 // Create application instance
                 window.thomasApp = new ThomasAttractorApp({
@@ -282,7 +441,7 @@
                     stepsPerFrame: 200,  // Much faster trajectory generation!
                     defaultB: 0.19,
                     defaultDt: 0.005,
-                    enableVolumetricEffects: true  // Enable all volumetric visual layers!
+                    enableVolumetricEffects: false  // Start with volumetric effects disabled
                 });
 
                 // Show success message
