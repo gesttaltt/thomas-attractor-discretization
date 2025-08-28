@@ -11,6 +11,7 @@ import { FloralProjection } from './visualization/FloralProjection.js';
 import { ControlPanel } from './ui/ControlPanel.js';
 import { ExportManager } from './utils/ExportManager.js';
 import { ErrorBoundary, InputValidator, HealthMonitor } from './utils/ErrorHandling.js';
+import { Logger, LogLevel, PerformanceLogger } from './utils/Logger.js';
 
 export class ThomasAttractorApp {
     constructor(config = {}) {
@@ -33,6 +34,10 @@ export class ThomasAttractorApp {
         
         this.components = {};
         
+        // Initialize logging
+        this.logger = new Logger('ThomasAttractorApp');
+        this.perfLogger = new PerformanceLogger('App');
+        
         // IMPROVEMENT: Add error boundary and health monitoring
         this.errorBoundary = new ErrorBoundary();
         this.healthMonitor = new HealthMonitor(this);
@@ -43,10 +48,11 @@ export class ThomasAttractorApp {
 
     async init() {
         try {
-            console.log('🚀 Initializing Thomas Attractor Visualization...');
+            this.logger.info('🚀 Initializing Thomas Attractor Visualization...');
             
             // Verify THREE.js is loaded
             if (typeof THREE === 'undefined') {
+                this.logger.error('THREE.js is required but not loaded');
                 throw new Error('THREE.js is required but not loaded');
             }
             
@@ -65,7 +71,7 @@ export class ThomasAttractorApp {
             
             // 3D visualization
             if (this.config.mainCanvas) {
-                console.log('Creating 3D renderer with canvas:', this.config.mainCanvas);
+                this.logger.debug('Creating 3D renderer with canvas:', this.config.mainCanvas);
                 try {
                     this.renderer3D = new Renderer3D(this.config.mainCanvas, {
                         maxParticles: this.config.maxParticles,
@@ -73,13 +79,13 @@ export class ThomasAttractorApp {
                         autoRotate: true,
                         enableVolumetricEffects: this.config.enableVolumetricEffects
                     });
-                    console.log('✅ 3D renderer created successfully');
+                    this.logger.info('✅ 3D renderer created successfully');
                 } catch (error) {
-                    console.error('❌ Failed to create 3D renderer:', error);
+                    this.logger.error('❌ Failed to create 3D renderer:', error);
                     throw error;
                 }
             } else {
-                console.warn('⚠️ No mainCanvas provided, skipping 3D renderer');
+                this.logger.warn('⚠️ No mainCanvas provided, skipping 3D renderer');
             }
             
             // 2D floral projection

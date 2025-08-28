@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Runner - Thomas Attractor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-suite {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .test-group {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+        
+        .test-case {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 15px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+        
+        .test-case:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .test-name {
+            flex: 1;
+            font-size: 14px;
+        }
+        
+        .test-status {
+            padding: 3px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .status-pass {
+            background: #4caf50;
+        }
+        
+        .status-fail {
+            background: #f44336;
+        }
+        
+        .status-running {
+            background: #2196f3;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-pending {
+            background: #9e9e9e;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .summary-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .summary-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 12px 30px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .error-output {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid rgba(76, 175, 80, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Thomas Attractor Test Suite</h1>
+        
+        <div class="controls">
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="runUnitTests()">Unit Tests</button>
+            <button onclick="runIntegrationTests()">Integration Tests</button>
+            <button onclick="runPerformanceTests()">Performance Tests</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <div class="summary-value" id="total-tests">0</div>
+                <div class="summary-label">Total Tests</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="passed-tests" style="color: #4caf50;">0</div>
+                <div class="summary-label">Passed</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="failed-tests" style="color: #f44336;">0</div>
+                <div class="summary-label">Failed</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="coverage">0%</div>
+                <div class="summary-label">Coverage</div>
+            </div>
+        </div>
+        
+        <div id="test-results"></div>
+    </div>
+
+    <script type="module">
+        import { ThomasAttractor } from './src/core/ThomasAttractor.js';
+        import { ValidationError } from './src/utils/ErrorHandling.js';
+        import { PHYSICS, VOLUMETRIC, PERFORMANCE } from './src/utils/Constants.js';
+        import { Logger } from './src/utils/Logger.js';
+        import { GridTraversal, FiniteDifference, Interpolation } from './src/utils/GridUtilities.js';
+        
+        const logger = new Logger('TestRunner');
+        
+        // Simple test framework
+        class TestRunner {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+                this.currentSuite = null;
+            }
+            
+            describe(name, fn) {
+                this.currentSuite = { name, tests: [] };
+                fn();
+                this.tests.push(this.currentSuite);
+                this.currentSuite = null;
+            }
+            
+            test(name, fn) {
+                if (this.currentSuite) {
+                    this.currentSuite.tests.push({ name, fn });
+                }
+            }
+            
+            async runAll() {
+                this.results = [];
+                let totalPassed = 0;
+                let totalFailed = 0;
+                
+                for (const suite of this.tests) {
+                    const suiteResults = { name: suite.name, tests: [] };
+                    
+                    for (const test of suite.tests) {
+                        const result = await this.runTest(test);
+                        suiteResults.tests.push(result);
+                        
+                        if (result.passed) {
+                            totalPassed++;
+                        } else {
+                            totalFailed++;
+                        }
+                    }
+                    
+                    this.results.push(suiteResults);
+                }
+                
+                return { totalPassed, totalFailed, results: this.results };
+            }
+            
+            async runTest(test) {
+                const startTime = performance.now();
+                
+                try {
+                    await test.fn();
+                    return {
+                        name: test.name,
+                        passed: true,
+                        time: performance.now() - startTime
+                    };
+                } catch (error) {
+                    return {
+                        name: test.name,
+                        passed: false,
+                        error: error.message,
+                        time: performance.now() - startTime
+                    };
+                }
+            }
+        }
+        
+        // Test assertions
+        const expect = (actual) => ({
+            toBe(expected) {
+                if (actual !== expected) {
+                    throw new Error(`Expected ${actual} to be ${expected}`);
+                }
+            },
+            toEqual(expected) {
+                if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+                    throw new Error(`Expected ${JSON.stringify(actual)} to equal ${JSON.stringify(expected)}`);
+                }
+            },
+            toBeCloseTo(expected, precision = 2) {
+                const diff = Math.abs(actual - expected);
+                const threshold = Math.pow(10, -precision) / 2;
+                if (diff > threshold) {
+                    throw new Error(`Expected ${actual} to be close to ${expected}`);
+                }
+            },
+            toBeGreaterThan(expected) {
+                if (actual <= expected) {
+                    throw new Error(`Expected ${actual} to be greater than ${expected}`);
+                }
+            },
+            toBeLessThan(expected) {
+                if (actual >= expected) {
+                    throw new Error(`Expected ${actual} to be less than ${expected}`);
+                }
+            },
+            toThrow(ErrorType) {
+                try {
+                    actual();
+                    throw new Error(`Expected function to throw ${ErrorType?.name || 'an error'}`);
+                } catch (error) {
+                    if (ErrorType && !(error instanceof ErrorType)) {
+                        throw new Error(`Expected ${ErrorType.name} but got ${error.constructor.name}`);
+                    }
+                }
+            },
+            toHaveLength(expected) {
+                if (actual.length !== expected) {
+                    throw new Error(`Expected length ${actual.length} to be ${expected}`);
+                }
+            }
+        });
+        
+        const runner = new TestRunner();
+        
+        // Define tests
+        runner.describe('ThomasAttractor Core', () => {
+            runner.test('should initialize with defaults', () => {
+                const attractor = new ThomasAttractor();
+                expect(attractor.b).toBe(PHYSICS.DEFAULT_B);
+                expect(attractor.dt).toBe(PHYSICS.DEFAULT_DT);
+            });
+            
+            runner.test('should validate parameters', () => {
+                const attractor = new ThomasAttractor();
+                expect(() => attractor.setB(-1)).toThrow(ValidationError);
+                expect(() => attractor.setDt('invalid')).toThrow(ValidationError);
+            });
+            
+            runner.test('should calculate derivatives correctly', () => {
+                const attractor = new ThomasAttractor();
+                const state = [1, 0.5, -0.5];
+                const derivs = attractor.derivatives(state);
+                
+                expect(derivs[0]).toBeCloseTo(Math.sin(0.5) - PHYSICS.DEFAULT_B * 1);
+                expect(derivs[1]).toBeCloseTo(Math.sin(-0.5) - PHYSICS.DEFAULT_B * 0.5);
+                expect(derivs[2]).toBeCloseTo(Math.sin(1) - PHYSICS.DEFAULT_B * (-0.5));
+            });
+            
+            runner.test('should evolve state', () => {
+                const attractor = new ThomasAttractor();
+                const initial = [...attractor.currentState];
+                attractor.step(10);
+                const final = attractor.currentState;
+                
+                expect(initial).not.toEqual(final);
+            });
+        });
+        
+        runner.describe('Grid Utilities', () => {
+            runner.test('should traverse grid in chunks', () => {
+                let count = 0;
+                GridTraversal.processChunked(8, 2, () => count++);
+                expect(count).toBe(512); // 8^3
+            });
+            
+            runner.test('should calculate finite differences', () => {
+                const field = new Float32Array(27); // 3x3x3
+                field[13] = 1; // Center
+                
+                const div = FiniteDifference.divergence(field, field, field, 1, 1, 1, 3);
+                expect(div).toBeCloseTo(0);
+            });
+            
+            runner.test('should perform trilinear interpolation', () => {
+                const field = new Float32Array(8);
+                field[0] = 1; // Corner value
+                
+                const value = Interpolation.trilinear(field, 0, 0, 0, 2, 1);
+                expect(value).toBeCloseTo(1);
+            });
+        });
+        
+        runner.describe('Constants', () => {
+            runner.test('should have valid physics constants', () => {
+                expect(PHYSICS.DEFAULT_B).toBeGreaterThan(0);
+                expect(PHYSICS.MIN_B).toBeLessThan(PHYSICS.MAX_B);
+                expect(PHYSICS.MIN_DT).toBeLessThan(PHYSICS.MAX_DT);
+            });
+            
+            runner.test('should have valid volumetric constants', () => {
+                expect(VOLUMETRIC.DEFAULT_GRID_SIZE).toBeGreaterThan(0);
+                expect(VOLUMETRIC.CHUNK_SIZE).toBeGreaterThan(0);
+                expect(VOLUMETRIC.CHUNK_SIZE).toBeLessThan(VOLUMETRIC.DEFAULT_GRID_SIZE);
+            });
+        });
+        
+        runner.describe('Performance', () => {
+            runner.test('should complete 1000 steps quickly', async () => {
+                const attractor = new ThomasAttractor();
+                const start = performance.now();
+                attractor.step(1000);
+                const elapsed = performance.now() - start;
+                
+                expect(elapsed).toBeLessThan(100); // Less than 100ms
+            });
+            
+            runner.test('should handle large trajectories', () => {
+                const attractor = new ThomasAttractor();
+                attractor.step(10000);
+                const trajectory = attractor.getTrajectory(1000);
+                
+                expect(trajectory).toHaveLength(1000);
+            });
+        });
+        
+        // UI functions
+        window.runAllTests = async function() {
+            displayResults('Running all tests...', 'running');
+            
+            const results = await runner.runAll();
+            displayTestResults(results);
+            updateSummary(results);
+        };
+        
+        window.runUnitTests = async function() {
+            displayResults('Running unit tests...', 'running');
+            
+            // Filter and run only unit tests
+            const unitRunner = new TestRunner();
+            unitRunner.tests = runner.tests.filter(s => 
+                s.name.includes('Core') || s.name.includes('Utilities')
+            );
+            
+            const results = await unitRunner.runAll();
+            displayTestResults(results);
+            updateSummary(results);
+        };
+        
+        window.runIntegrationTests = async function() {
+            displayResults('Running integration tests...', 'running');
+            logger.info('Integration tests not yet implemented');
+        };
+        
+        window.runPerformanceTests = async function() {
+            displayResults('Running performance tests...', 'running');
+            
+            // Filter and run only performance tests
+            const perfRunner = new TestRunner();
+            perfRunner.tests = runner.tests.filter(s => s.name.includes('Performance'));
+            
+            const results = await perfRunner.runAll();
+            displayTestResults(results);
+            updateSummary(results);
+        };
+        
+        window.clearResults = function() {
+            document.getElementById('test-results').innerHTML = '';
+            updateSummary({ totalPassed: 0, totalFailed: 0 });
+        };
+        
+        function displayResults(message, status) {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = `<div class="test-suite"><p>${message}</p></div>`;
+        }
+        
+        function displayTestResults(results) {
+            const resultsDiv = document.getElementById('test-results');
+            let html = '';
+            
+            for (const suite of results.results) {
+                html += `<div class="test-suite">`;
+                html += `<h3>${suite.name}</h3>`;
+                
+                for (const test of suite.tests) {
+                    const status = test.passed ? 'pass' : 'fail';
+                    html += `
+                        <div class="test-case">
+                            <span class="test-name">${test.name}</span>
+                            <span class="test-status status-${status}">
+                                ${test.passed ? 'PASS' : 'FAIL'} (${test.time.toFixed(1)}ms)
+                            </span>
+                        </div>
+                    `;
+                    
+                    if (!test.passed && test.error) {
+                        html += `<div class="error-output">${test.error}</div>`;
+                    }
+                }
+                
+                html += `</div>`;
+            }
+            
+            if (results.totalFailed === 0) {
+                html += `<div class="success-message">✅ All tests passed!</div>`;
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function updateSummary(results) {
+            const total = results.totalPassed + results.totalFailed;
+            document.getElementById('total-tests').textContent = total;
+            document.getElementById('passed-tests').textContent = results.totalPassed;
+            document.getElementById('failed-tests').textContent = results.totalFailed;
+            
+            const coverage = total > 0 ? 
+                Math.round((results.totalPassed / total) * 100) : 0;
+            document.getElementById('coverage').textContent = `${coverage}%`;
+        }
+        
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            logger.info('Test runner ready');
+        });
+    </script>
+</body>
+</html>
