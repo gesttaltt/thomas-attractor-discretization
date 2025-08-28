@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimal Thomas Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <canvas id="mainCanvas" style="width:800px;height:600px;border:1px solid white;background:black;"></canvas>
+    <div id="log" style="font-family:monospace;color:green;background:black;padding:10px;"></div>
+    
+    <script type="module">
+        const log = msg => {
+            const div = document.getElementById('log');
+            div.innerHTML += msg + '<br>';
+            console.log(msg);
+        };
+        
+        try {
+            log('1. THREE.js loaded: ' + (typeof THREE !== 'undefined'));
+            
+            log('2. Loading ThomasAttractor...');
+            const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+            log('   ✓ ThomasAttractor loaded');
+            
+            log('3. Loading Renderer3D...');
+            const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+            log('   ✓ Renderer3D loaded');
+            
+            log('4. Creating ThomasAttractor...');
+            const attractor = new ThomasAttractor({ b: 0.19, dt: 0.005 });
+            log('   ✓ Attractor created');
+            
+            log('5. Creating Renderer3D...');
+            const canvas = document.getElementById('mainCanvas');
+            const renderer = new Renderer3D(canvas, { 
+                maxParticles: 1000,
+                enableVolumetricEffects: false 
+            });
+            log('   ✓ Renderer created');
+            
+            log('6. Generating points...');
+            const points = attractor.step(100);
+            log('   ✓ Generated ' + points.length + ' points');
+            
+            log('7. Adding points to renderer...');
+            renderer.addPoints(points);
+            log('   ✓ Points added');
+            
+            log('8. Rendering...');
+            renderer.render();
+            log('   ✓ Rendered!');
+            
+            log('SUCCESS! Basic system working.');
+            
+        } catch (error) {
+            log('ERROR: ' + error.message);
+            log('Stack: ' + error.stack);
+        }
+    </script>
+</body>
+</html>

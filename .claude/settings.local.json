@@ -22,7 +22,8 @@
       "Bash(timeout:*)",
       "Bash(git commit:*)",
       "Bash(tasklist:*)",
-      "Bash(wmic:*)"
+      "Bash(wmic:*)",
+      "Bash(start firefox:*)"
     ],
     "deny": [],
     "ask": [],

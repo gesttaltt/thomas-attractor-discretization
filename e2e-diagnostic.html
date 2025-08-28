@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2E Diagnostic Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            margin: 0;
+        }
+        h2 { color: #00ffff; }
+        .test-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .pass { color: #00ff00; }
+        .fail { color: #ff0000; }
+        .warn { color: #ffaa00; }
+        .info { color: #00aaff; }
+        .data { color: #ff00ff; }
+        canvas {
+            border: 1px solid #333;
+            display: inline-block;
+            margin: 10px;
+        }
+        #results {
+            background: #000;
+            padding: 10px;
+            border: 1px solid #00ff00;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        button {
+            background: #003366;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #004488;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 E2E Diagnostic Scanner</h1>
+    <div id="results"></div>
+    
+    <div class="test-section">
+        <h2>Test Canvases</h2>
+        <canvas id="test3D" width="400" height="300"></canvas>
+        <canvas id="test2D" width="400" height="300"></canvas>
+    </div>
+    
+    <div class="test-section">
+        <h2>Controls</h2>
+        <button onclick="runFullDiagnostic()">🚀 Run Full Diagnostic</button>
+        <button onclick="testMath()">🧮 Test Math Only</button>
+        <button onclick="testRendering()">🎨 Test Rendering Only</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <script type="module">
+        const results = document.getElementById('results');
+        let testApp = null;
+        
+        function log(msg, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = type;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `[${timestamp}] <span class="${type}">${msg}</span>`;
+            results.appendChild(entry);
+            results.scrollTop = results.scrollHeight;
+            console.log(`[${type}] ${msg}`);
+        }
+        
+        window.clearResults = function() {
+            results.innerHTML = '';
+        }
+        
+        // Test 1: Dependencies
+        async function testDependencies() {
+            log('═══ DEPENDENCY CHECK ═══', 'info');
+            
+            // THREE.js
+            if (typeof THREE === 'undefined') {
+                log('❌ THREE.js not loaded', 'fail');
+                return false;
+            }
+            log('✅ THREE.js loaded (version: ' + THREE.REVISION + ')', 'pass');
+            
+            // WebGL
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!gl) {
+                log('❌ WebGL not supported', 'fail');
+                return false;
+            }
+            log('✅ WebGL supported', 'pass');
+            
+            // Check modules
+            try {
+                const modules = [
+                    './src/core/ThomasAttractor.js',
+                    './src/core/ChaosAnalysis.js',
+                    './src/visualization/Renderer3D.js',
+                    './src/visualization/FloralProjection.js',
+                    './src/ui/ControlPanel.js'
+                ];
+                
+                for (const module of modules) {
+                    await import(module);
+                    log(`✅ Module loaded: ${module}`, 'pass');
+                }
+            } catch (error) {
+                log(`❌ Module load error: ${error.message}`, 'fail');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Test 2: Mathematical Engine
+        async function testMathematicalEngine() {
+            log('═══ MATHEMATICAL ENGINE TEST ═══', 'info');
+            
+            try {
+                const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+                
+                // Create attractor
+                const attractor = new ThomasAttractor({ b: 0.19, dt: 0.005 });
+                log('✅ Attractor created', 'pass');
+                
+                // Test initial state
+                const initial = attractor.getCurrentState();
+                log(`📊 Initial state: [${initial[0].toFixed(4)}, ${initial[1].toFixed(4)}, ${initial[2].toFixed(4)}]`, 'data');
+                
+                // Generate trajectory
+                const points = [];
+                for (let i = 0; i < 1000; i++) {
+                    const point = attractor.step(1);
+                    points.push(...point);
+                }
+                log(`✅ Generated ${points.length} points`, 'pass');
+                
+                // Check for NaN or Infinity
+                let hasInvalid = false;
+                for (const point of points) {
+                    if (!isFinite(point[0]) || !isFinite(point[1]) || !isFinite(point[2])) {
+                        hasInvalid = true;
+                        break;
+                    }
+                }
+                
+                if (hasInvalid) {
+                    log('❌ Invalid values detected (NaN or Infinity)', 'fail');
+                    return false;
+                }
+                log('✅ All values are finite', 'pass');
+                
+                // Check bounds
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+                let minZ = Infinity, maxZ = -Infinity;
+                
+                for (const point of points) {
+                    minX = Math.min(minX, point[0]);
+                    maxX = Math.max(maxX, point[0]);
+                    minY = Math.min(minY, point[1]);
+                    maxY = Math.max(maxY, point[1]);
+                    minZ = Math.min(minZ, point[2]);
+                    maxZ = Math.max(maxZ, point[2]);
+                }
+                
+                log(`📊 X range: [${minX.toFixed(2)}, ${maxX.toFixed(2)}]`, 'data');
+                log(`📊 Y range: [${minY.toFixed(2)}, ${maxY.toFixed(2)}]`, 'data');
+                log(`📊 Z range: [${minZ.toFixed(2)}, ${maxZ.toFixed(2)}]`, 'data');
+                
+                // Check if attractor is evolving
+                const variance = (maxX - minX) + (maxY - minY) + (maxZ - minZ);
+                if (variance < 0.1) {
+                    log('⚠️ Attractor not evolving properly (too small variance)', 'warn');
+                    return false;
+                }
+                log('✅ Attractor dynamics OK', 'pass');
+                
+                return true;
+                
+            } catch (error) {
+                log(`❌ Math engine error: ${error.message}`, 'fail');
+                console.error(error);
+                return false;
+            }
+        }
+        
+        // Test 3: 3D Rendering Pipeline
+        async function test3DRendering() {
+            log('═══ 3D RENDERING PIPELINE TEST ═══', 'info');
+            
+            try {
+                const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+                const canvas = document.getElementById('test3D');
+                
+                // Create simple OrbitControls if needed
+                if (!THREE.OrbitControls) {
+                    THREE.OrbitControls = function(camera, domElement) {
+                        this.update = function() {};
+                    };
+                }
+                
+                // Create renderer
+                const renderer = new Renderer3D(canvas, {
+                    maxParticles: 1000,
+                    enableVolumetricEffects: false
+                });
+                log('✅ 3D Renderer created', 'pass');
+                
+                // Check scene setup
+                if (!renderer.scene) {
+                    log('❌ Scene not created', 'fail');
+                    return false;
+                }
+                log('✅ Scene created', 'pass');
+                
+                if (!renderer.camera) {
+                    log('❌ Camera not created', 'fail');
+                    return false;
+                }
+                log('✅ Camera created', 'pass');
+                
+                if (!renderer.renderer) {
+                    log('❌ WebGL renderer not created', 'fail');
+                    return false;
+                }
+                log('✅ WebGL renderer created', 'pass');
+                
+                if (!renderer.particles) {
+                    log('❌ Particle system not created', 'fail');
+                    return false;
+                }
+                log('✅ Particle system created', 'pass');
+                
+                // Add test points
+                const testPoints = [];
+                for (let i = 0; i < 100; i++) {
+                    const angle = (i / 100) * Math.PI * 2;
+                    testPoints.push([
+                        Math.cos(angle) * 2,
+                        Math.sin(angle) * 2,
+                        i * 0.01
+                    ]);
+                }
+                
+                renderer.addPoints(testPoints);
+                log(`✅ Added ${testPoints.length} test points`, 'pass');
+                
+                // Test render
+                renderer.render();
+                log('✅ Render executed', 'pass');
+                
+                // Check particle positions
+                const positions = renderer.particles.geometry.attributes.position.array;
+                let validPositions = 0;
+                for (let i = 0; i < testPoints.length * 3; i += 3) {
+                    if (positions[i] !== 0 || positions[i+1] !== 0 || positions[i+2] !== 0) {
+                        validPositions++;
+                    }
+                }
+                log(`📊 Valid particle positions: ${validPositions}/${testPoints.length}`, 'data');
+                
+                if (validPositions === 0) {
+                    log('❌ No particles visible', 'fail');
+                    return false;
+                }
+                
+                return true;
+                
+            } catch (error) {
+                log(`❌ 3D Rendering error: ${error.message}`, 'fail');
+                console.error(error);
+                return false;
+            }
+        }
+        
+        // Test 4: 2D Canvas Rendering
+        async function test2DRendering() {
+            log('═══ 2D CANVAS RENDERING TEST ═══', 'info');
+            
+            try {
+                const { FloralProjection } = await import('./src/visualization/FloralProjection.js');
+                const canvas = document.getElementById('test2D');
+                
+                // Create projection
+                const floral = new FloralProjection(canvas, {
+                    projectionPlane: 'xy',
+                    bufferSize: 1000
+                });
+                log('✅ Floral projection created', 'pass');
+                
+                // Check context
+                if (!floral.ctx) {
+                    log('❌ 2D context not created', 'fail');
+                    return false;
+                }
+                log('✅ 2D context created', 'pass');
+                
+                // Add test points
+                const testPoints = [];
+                for (let i = 0; i < 100; i++) {
+                    const angle = (i / 100) * Math.PI * 2;
+                    testPoints.push([
+                        Math.cos(angle),
+                        Math.sin(angle),
+                        0
+                    ]);
+                }
+                
+                floral.addPoints(testPoints);
+                log(`✅ Added ${testPoints.length} test points to 2D`, 'pass');
+                
+                // Test render
+                floral.render();
+                log('✅ 2D render executed', 'pass');
+                
+                // Check if anything was drawn
+                const imageData = floral.ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let nonBlackPixels = 0;
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    if (imageData.data[i] > 0 || imageData.data[i+1] > 0 || imageData.data[i+2] > 0) {
+                        nonBlackPixels++;
+                    }
+                }
+                
+                log(`📊 Non-black pixels: ${nonBlackPixels}`, 'data');
+                
+                if (nonBlackPixels === 0) {
+                    log('⚠️ No visible content in 2D canvas', 'warn');
+                }
+                
+                return true;
+                
+            } catch (error) {
+                log(`❌ 2D Rendering error: ${error.message}`, 'fail');
+                console.error(error);
+                return false;
+            }
+        }
+        
+        // Test 5: Full Integration
+        async function testFullIntegration() {
+            log('═══ FULL INTEGRATION TEST ═══', 'info');
+            
+            try {
+                const { ThomasAttractorApp } = await import('./src/app.js');
+                
+                // Create mini app
+                const testCanvas3D = document.getElementById('test3D');
+                const testCanvas2D = document.getElementById('test2D');
+                
+                if (!THREE.OrbitControls) {
+                    THREE.OrbitControls = function(camera, domElement) {
+                        this.update = function() {};
+                        this.enableDamping = true;
+                        this.autoRotate = false;
+                    };
+                }
+                
+                testApp = new ThomasAttractorApp({
+                    mainCanvas: testCanvas3D,
+                    floralCanvas: testCanvas2D,
+                    controlsContainer: null, // No controls for test
+                    maxParticles: 1000,
+                    stepsPerFrame: 10,
+                    enableVolumetricEffects: false
+                });
+                
+                log('✅ Full app created', 'pass');
+                
+                // Check components
+                if (!testApp.attractor) {
+                    log('❌ Attractor not initialized', 'fail');
+                    return false;
+                }
+                log('✅ Attractor initialized', 'pass');
+                
+                if (!testApp.renderer3D) {
+                    log('❌ 3D renderer not initialized', 'fail');
+                    return false;
+                }
+                log('✅ 3D renderer initialized', 'pass');
+                
+                if (!testApp.floralProjection) {
+                    log('❌ 2D projection not initialized', 'fail');
+                    return false;
+                }
+                log('✅ 2D projection initialized', 'pass');
+                
+                // Check if animation is running
+                const isRunning = testApp.isRunning;
+                log(`📊 Animation running: ${isRunning}`, 'data');
+                
+                if (!isRunning) {
+                    log('⚠️ Animation not started automatically', 'warn');
+                    testApp.startSimulation();
+                }
+                
+                // Let it run for a bit
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Check stats
+                const stats = testApp.getStats();
+                log(`📊 Frame count: ${stats.frameCount}`, 'data');
+                log(`📊 Particle count: ${stats.particleCount}`, 'data');
+                log(`📊 FPS: ${stats.performance.fps.toFixed(1)}`, 'data');
+                
+                if (stats.frameCount === 0) {
+                    log('❌ No frames rendered', 'fail');
+                    return false;
+                }
+                
+                log('✅ Full integration test passed', 'pass');
+                return true;
+                
+            } catch (error) {
+                log(`❌ Integration error: ${error.message}`, 'fail');
+                console.error(error);
+                return false;
+            }
+        }
+        
+        // Main diagnostic function
+        window.runFullDiagnostic = async function() {
+            clearResults();
+            log('🚀 STARTING E2E DIAGNOSTIC SCAN', 'info');
+            log('════════════════════════════════', 'info');
+            
+            const tests = [
+                { name: 'Dependencies', fn: testDependencies },
+                { name: 'Mathematical Engine', fn: testMathematicalEngine },
+                { name: '3D Rendering', fn: test3DRendering },
+                { name: '2D Rendering', fn: test2DRendering },
+                { name: 'Full Integration', fn: testFullIntegration }
+            ];
+            
+            const results = [];
+            
+            for (const test of tests) {
+                log(`\n🔬 Running: ${test.name}`, 'info');
+                const result = await test.fn();
+                results.push({ name: test.name, passed: result });
+                
+                if (!result) {
+                    log(`⚠️ ${test.name} failed, continuing...`, 'warn');
+                }
+            }
+            
+            // Summary
+            log('\n════════════════════════════════', 'info');
+            log('📊 DIAGNOSTIC SUMMARY', 'info');
+            
+            const passed = results.filter(r => r.passed).length;
+            const failed = results.filter(r => !r.passed).length;
+            
+            results.forEach(r => {
+                log(`${r.passed ? '✅' : '❌'} ${r.name}`, r.passed ? 'pass' : 'fail');
+            });
+            
+            log(`\n📈 Results: ${passed}/${results.length} tests passed`, passed === results.length ? 'pass' : 'warn');
+            
+            if (failed > 0) {
+                log('🔧 RECOMMENDED FIXES:', 'warn');
+                
+                if (!results[0].passed) {
+                    log('• Check that all JavaScript files are loading correctly', 'info');
+                    log('• Verify THREE.js CDN is accessible', 'info');
+                }
+                
+                if (!results[1].passed) {
+                    log('• Mathematical computation may have numerical issues', 'info');
+                    log('• Check attractor parameters (b, dt)', 'info');
+                }
+                
+                if (!results[2].passed) {
+                    log('• WebGL context may not be initializing', 'info');
+                    log('• Check browser WebGL support', 'info');
+                }
+                
+                if (!results[3].passed) {
+                    log('• 2D canvas context issues', 'info');
+                    log('• Check canvas element accessibility', 'info');
+                }
+                
+                if (!results[4].passed) {
+                    log('• Component initialization order may be wrong', 'info');
+                    log('• Check async/await flow in app.js', 'info');
+                }
+            } else {
+                log('🎉 All systems operational!', 'pass');
+            }
+        }
+        
+        window.testMath = testMathematicalEngine;
+        window.testRendering = async function() {
+            clearResults();
+            await test3DRendering();
+            await test2DRendering();
+        }
+        
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('🔬 E2E Diagnostic Scanner Ready', 'info');
+            log('Click "Run Full Diagnostic" to begin', 'info');
+        });
+    </script>
+</body>
+</html>

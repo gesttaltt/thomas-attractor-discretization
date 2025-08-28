@@ -21,6 +21,12 @@ export class ControlPanel {
     }
 
     createUI() {
+        // Skip if no container provided
+        if (!this.container) {
+            console.warn('ControlPanel: No container provided, skipping UI creation');
+            return;
+        }
+        
         this.container.innerHTML = `
             <div class="control-panel">
                 <!-- Simulation Controls -->
@@ -83,43 +89,65 @@ export class ControlPanel {
                         </div>
                         <div class="volumetric-controls">
                             <div class="control-group">
-                                <label>
-                                    <input type="checkbox" id="density-clouds"> Density Clouds
+                                <label title="Shows probability density of trajectory visits in phase space">
+                                    <input type="checkbox" id="density-clouds"> Density Field
                                 </label>
                             </div>
                             <div class="control-group">
-                                <label>
-                                    <input type="checkbox" id="velocity-glow"> Velocity Glow
+                                <label title="Displays velocity vectors and magnitude throughout the field">
+                                    <input type="checkbox" id="velocity-glow"> Velocity Vectors
                                 </label>
                             </div>
                             <div class="control-group">
-                                <label>
-                                    <input type="checkbox" id="energy-field"> Energy Field
+                                <label title="Shows divergence (expansion/contraction) of the flow">
+                                    <input type="checkbox" id="energy-field"> Divergence Field
                                 </label>
                             </div>
                             <div class="control-group">
-                                <label>
-                                    <input type="checkbox" id="vorticity-ribbons"> Vorticity Ribbons
+                                <label title="Visualizes vorticity (rotation/curl) of the vector field">
+                                    <input type="checkbox" id="vorticity-ribbons"> Vorticity Field
                                 </label>
                             </div>
                             <div class="control-group">
-                                <label>
-                                    <input type="checkbox" id="phase-flow"> Phase Flow Lines
+                                <label title="Poincaré sections showing periodic behavior">
+                                    <input type="checkbox" id="phase-flow"> Poincaré Sections
                                 </label>
                             </div>
                         </div>
                         <div class="opacity-controls">
                             <div class="control-group">
-                                <label for="clouds-opacity">Clouds Opacity: <span id="clouds-opacity-value">0.03</span></label>
-                                <input type="range" id="clouds-opacity" min="0" max="1" step="0.01" value="0.03">
+                                <label for="clouds-opacity">Density Threshold: <span id="clouds-opacity-value">0.01</span></label>
+                                <input type="range" id="clouds-opacity" min="0.001" max="0.1" step="0.001" value="0.01">
                             </div>
                             <div class="control-group">
-                                <label for="glow-opacity">Glow Intensity: <span id="glow-opacity-value">0.2</span></label>
-                                <input type="range" id="glow-opacity" min="0" max="2" step="0.1" value="0.2">
+                                <label for="glow-opacity">Velocity Scale: <span id="glow-opacity-value">1.0</span></label>
+                                <input type="range" id="glow-opacity" min="0.1" max="3" step="0.1" value="1.0">
                             </div>
                             <div class="control-group">
-                                <label for="energy-opacity">Energy Opacity: <span id="energy-opacity-value">0.02</span></label>
-                                <input type="range" id="energy-opacity" min="0" max="1" step="0.01" value="0.02">
+                                <label for="energy-opacity">Field Opacity: <span id="energy-opacity-value">0.20</span></label>
+                                <input type="range" id="energy-opacity" min="0" max="1" step="0.01" value="0.20">
+                            </div>
+                        </div>
+                        <div class="research-controls">
+                            <div class="control-group">
+                                <label for="kde-bandwidth">KDE Bandwidth: <span id="kde-bandwidth-value">0.20</span></label>
+                                <input type="range" id="kde-bandwidth" min="0.05" max="1.0" step="0.05" value="0.20">
+                            </div>
+                            <div class="control-group">
+                                <label for="grid-resolution">Grid Resolution: <span id="grid-resolution-value">128</span></label>
+                                <input type="range" id="grid-resolution" min="64" max="256" step="32" value="128">
+                            </div>
+                            <div class="control-group">
+                                <label for="isosurface-count">Isosurface Levels: <span id="isosurface-count-value">4</span></label>
+                                <input type="range" id="isosurface-count" min="2" max="8" step="1" value="4">
+                            </div>
+                            <div class="control-group">
+                                <label for="streamline-count">Streamlines: <span id="streamline-count-value">30</span></label>
+                                <input type="range" id="streamline-count" min="10" max="100" step="5" value="30">
+                            </div>
+                            <div class="control-group">
+                                <label for="lyapunov-iterations">Lyapunov Steps: <span id="lyapunov-iterations-value">500</span></label>
+                                <input type="range" id="lyapunov-iterations" min="100" max="2000" step="100" value="500">
                             </div>
                         </div>
                         <div class="color-controls">
@@ -339,6 +367,25 @@ export class ControlPanel {
                 cursor: pointer;
                 background: rgba(0, 0, 0, 0.3);
             }
+            
+            .research-controls {
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid rgba(100, 181, 246, 0.2);
+                background: rgba(0, 50, 100, 0.1);
+                border-radius: 4px;
+                padding: 10px;
+            }
+            
+            .research-controls .control-group {
+                margin-bottom: 8px;
+            }
+            
+            .research-controls label {
+                color: #88ccff;
+                font-size: 12px;
+                font-style: italic;
+            }
         `;
         
         document.head.appendChild(style);
@@ -375,6 +422,13 @@ export class ControlPanel {
             energyColor: document.getElementById('energy-color'),
             glowColor: document.getElementById('glow-color'),
             
+            // Research controls
+            kdeBandwidth: document.getElementById('kde-bandwidth'),
+            gridResolution: document.getElementById('grid-resolution'),
+            isosurfaceCount: document.getElementById('isosurface-count'),
+            streamlineCount: document.getElementById('streamline-count'),
+            lyapunovIterations: document.getElementById('lyapunov-iterations'),
+            
             // Value displays
             bValue: document.getElementById('b-value'),
             dtValue: document.getElementById('dt-value'),
@@ -382,6 +436,11 @@ export class ControlPanel {
             cloudsOpacityValue: document.getElementById('clouds-opacity-value'),
             glowOpacityValue: document.getElementById('glow-opacity-value'),
             energyOpacityValue: document.getElementById('energy-opacity-value'),
+            kdeBandwidthValue: document.getElementById('kde-bandwidth-value'),
+            gridResolutionValue: document.getElementById('grid-resolution-value'),
+            isosurfaceCountValue: document.getElementById('isosurface-count-value'),
+            streamlineCountValue: document.getElementById('streamline-count-value'),
+            lyapunovIterationsValue: document.getElementById('lyapunov-iterations-value'),
             lyapunovValue: document.getElementById('lyapunov-value'),
             ctmValue: document.getElementById('ctm-value'),
             dimensionValue: document.getElementById('dimension-value')
@@ -560,17 +619,68 @@ export class ControlPanel {
                 this.callbacks.onVolumetricChange({ glowColor: e.target.value });
             });
         }
+        
+        // Research controls
+        if (this.elements.kdeBandwidth) {
+            this.elements.kdeBandwidth.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.elements.kdeBandwidthValue.textContent = value.toFixed(2);
+                this.callbacks.onVolumetricChange({ kdeBandwidth: value });
+            });
+        }
+        
+        if (this.elements.gridResolution) {
+            this.elements.gridResolution.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.elements.gridResolutionValue.textContent = value;
+                this.callbacks.onVolumetricChange({ gridResolution: value });
+            });
+        }
+        
+        if (this.elements.isosurfaceCount) {
+            this.elements.isosurfaceCount.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.elements.isosurfaceCountValue.textContent = value;
+                this.callbacks.onVolumetricChange({ isosurfaceCount: value });
+            });
+        }
+        
+        if (this.elements.streamlineCount) {
+            this.elements.streamlineCount.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.elements.streamlineCountValue.textContent = value;
+                this.callbacks.onVolumetricChange({ streamlineCount: value });
+            });
+        }
+        
+        if (this.elements.lyapunovIterations) {
+            this.elements.lyapunovIterations.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                this.elements.lyapunovIterationsValue.textContent = value;
+                this.callbacks.onVolumetricChange({ lyapunovIterations: value });
+            });
+        }
     }
 
     setParameters(params) {
-        if (params.b !== undefined) {
-            this.elements.paramB.value = params.b;
-            this.elements.bValue.textContent = params.b.toFixed(3);
+        // Check if elements exist before accessing them
+        if (!this.elements || !this.elements.paramB) {
+            console.warn('ControlPanel: Elements not initialized, skipping setParameters');
+            return;
         }
         
-        if (params.dt !== undefined) {
+        if (params.b !== undefined && this.elements.paramB) {
+            this.elements.paramB.value = params.b;
+            if (this.elements.bValue) {
+                this.elements.bValue.textContent = params.b.toFixed(3);
+            }
+        }
+        
+        if (params.dt !== undefined && this.elements.paramDt) {
             this.elements.paramDt.value = params.dt;
-            this.elements.dtValue.textContent = params.dt.toFixed(4);
+            if (this.elements.dtValue) {
+                this.elements.dtValue.textContent = params.dt.toFixed(4);
+            }
         }
         
         if (params.presets) {
@@ -579,6 +689,11 @@ export class ControlPanel {
     }
 
     updatePresetList(presets) {
+        if (!this.elements || !this.elements.presetSelect) {
+            console.warn('ControlPanel: Preset select not available');
+            return;
+        }
+        
         const select = this.elements.presetSelect;
         select.innerHTML = '<option value="">Select a preset...</option>';
         
@@ -594,15 +709,19 @@ export class ControlPanel {
     }
 
     updateMetrics(metrics) {
-        if (metrics.lyapunov !== undefined) {
+        if (!this.elements) {
+            return;
+        }
+        
+        if (metrics.lyapunov !== undefined && this.elements.lyapunovValue) {
             this.elements.lyapunovValue.textContent = metrics.lyapunov.toFixed(4);
         }
         
-        if (metrics.ctm !== undefined) {
+        if (metrics.ctm !== undefined && this.elements.ctmValue) {
             this.elements.ctmValue.textContent = metrics.ctm.toFixed(3);
         }
         
-        if (metrics.dimension !== undefined) {
+        if (metrics.dimension !== undefined && this.elements.dimensionValue) {
             this.elements.dimensionValue.textContent = metrics.dimension.toFixed(2);
         }
     }

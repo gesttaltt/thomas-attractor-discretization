@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quick Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Quick Application Test</h1>
+    <canvas id="mainCanvas" width="800" height="600" style="border: 1px solid #ccc;"></canvas>
+    <canvas id="floralCanvas" width="400" height="400" style="border: 1px solid #ccc;"></canvas>
+    <div id="controls"></div>
+    <div id="log"></div>
+    
+    <script type="module">
+        const log = (msg, type = 'success') => {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = msg;
+            document.getElementById('log').appendChild(div);
+            console.log(msg);
+        };
+        
+        try {
+            log('Loading ThomasAttractor...');
+            const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+            const attractor = new ThomasAttractor();
+            log('✓ ThomasAttractor loaded and instantiated');
+            
+            // Test getCurrentState
+            const state = attractor.getCurrentState();
+            log(`✓ getCurrentState works: [${state.join(', ')}]`);
+            
+            // Generate some points
+            const points = attractor.generate(100);
+            log(`✓ Generated ${points.length / 3} points`);
+            
+            log('Loading FloralProjection...');
+            const { FloralProjection } = await import('./src/visualization/FloralProjection.js');
+            const floral = new FloralProjection();
+            log('✓ FloralProjection loaded');
+            
+            log('Loading Renderer3D...');
+            const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+            const renderer = new Renderer3D({
+                canvas: document.getElementById('mainCanvas'),
+                enableVolumetricEffects: false
+            });
+            log('✓ Renderer3D loaded');
+            
+            log('Loading ControlPanel...');
+            const { ControlPanel } = await import('./src/ui/ControlPanel.js');
+            const controls = new ControlPanel({
+                container: document.getElementById('controls'),
+                onChange: () => {}
+            });
+            log('✓ ControlPanel loaded');
+            
+            log('Loading app...');
+            const { ThomasAttractorApp } = await import('./src/app.js');
+            log('✓ App module loaded');
+            
+            log('Creating app instance...');
+            const app = new ThomasAttractorApp({
+                mainCanvas: document.getElementById('mainCanvas'),
+                floralCanvas: document.getElementById('floralCanvas'),
+                controlsContainer: document.getElementById('controls'),
+                maxParticles: 1000,
+                enableVolumetricEffects: false
+            });
+            log('✓ App created successfully');
+            
+            log('Initializing app...');
+            await app.init();
+            log('✓ App initialized successfully!');
+            
+            log('');
+            log('🎉 ALL TESTS PASSED! The application is working!', 'success');
+            
+        } catch (error) {
+            log(`❌ Error: ${error.message}`, 'error');
+            log(`Stack: ${error.stack}`, 'error');
+        }
+    </script>
+</body>
+</html>

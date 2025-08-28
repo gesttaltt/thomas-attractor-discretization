@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="test">Testing...</div>
+    <script type="module">
+        console.log('Test 1: THREE loaded?', typeof THREE !== 'undefined');
+        
+        try {
+            console.log('Test 2: Loading app.js...');
+            const { ThomasAttractorApp } = await import('./src/app.js');
+            console.log('Test 3: App loaded successfully');
+            
+            console.log('Test 4: Creating app without canvas...');
+            const app = new ThomasAttractorApp({
+                mainCanvas: null,
+                floralCanvas: null, 
+                controlsContainer: null,
+                enableVolumetricEffects: false
+            });
+            console.log('Test 5: App created!');
+            document.getElementById('test').innerHTML = 'SUCCESS!';
+        } catch(e) {
+            console.error('FAILED:', e);
+            document.getElementById('test').innerHTML = 'FAILED: ' + e.message;
+        }
+    </script>
+</body>
+</html>

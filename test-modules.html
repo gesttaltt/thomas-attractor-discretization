@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Module Test</title>
+</head>
+<body>
+    <h1>Module Loading Test</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        async function testModule(path) {
+            try {
+                const module = await import(path);
+                output.innerHTML += `<div style="color: green">✓ ${path}</div>`;
+                return true;
+            } catch (error) {
+                output.innerHTML += `<div style="color: red">✗ ${path}: ${error.message}</div>`;
+                console.error(path, error);
+                return false;
+            }
+        }
+        
+        async function runTests() {
+            const modules = [
+                './src/core/ThomasAttractor.js',
+                './src/core/ChaosAnalysis.js',
+                './src/visualization/FloralProjection.js',
+                './src/visualization/Renderer3D.js',
+                './src/visualization/VolumetricEffects.js',
+                './src/visualization/ResearchGradeDensityField.js',
+                './src/visualization/ResearchGradeVelocityField.js',
+                './src/ui/ControlPanel.js',
+                './src/app.js'
+            ];
+            
+            for (const mod of modules) {
+                await testModule(mod);
+            }
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>

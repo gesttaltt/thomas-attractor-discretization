@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thomas Attractor Diagnostic</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+        .section { margin: 20px 0; padding: 10px; border: 1px solid #0f0; }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+        .warning { color: #ff0; }
+    </style>
+</head>
+<body>
+    <h1>Thomas Attractor Initialization Diagnostic</h1>
+    
+    <div class="section" id="deps">
+        <h2>1. Dependencies Check</h2>
+    </div>
+    
+    <div class="section" id="modules">
+        <h2>2. Module Loading</h2>
+    </div>
+    
+    <div class="section" id="init">
+        <h2>3. Initialization Sequence</h2>
+    </div>
+    
+    <div class="section" id="errors">
+        <h2>4. Errors</h2>
+    </div>
+
+    <script type="module">
+        const log = (section, message, type = 'success') => {
+            const el = document.getElementById(section);
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            el.appendChild(div);
+            console.log(`[${section}] ${message}`);
+        };
+
+        // Check dependencies
+        log('deps', `THREE.js loaded: ${typeof THREE !== 'undefined' ? 'YES' : 'NO'}`, 
+            typeof THREE !== 'undefined' ? 'success' : 'error');
+        
+        if (typeof THREE !== 'undefined') {
+            log('deps', `THREE version: ${THREE.REVISION}`);
+            log('deps', `OrbitControls: ${typeof THREE.OrbitControls !== 'undefined' ? 'YES' : 'NO'}`,
+                typeof THREE.OrbitControls !== 'undefined' ? 'success' : 'error');
+        }
+
+        // Try loading modules
+        try {
+            log('modules', 'Loading core modules...');
+            
+            const modules = [
+                './src/core/ThomasAttractor.js',
+                './src/core/ChaosAnalysis.js',
+                './src/core/PresetManager.js',
+                './src/visualization/Renderer3D.js',
+                './src/visualization/FloralProjection.js',
+                './src/ui/ControlPanel.js'
+            ];
+            
+            for (const modulePath of modules) {
+                try {
+                    const module = await import(modulePath);
+                    log('modules', `✓ Loaded: ${modulePath}`, 'success');
+                } catch (e) {
+                    log('modules', `✗ Failed: ${modulePath} - ${e.message}`, 'error');
+                    log('errors', `${modulePath}: ${e.stack}`, 'error');
+                }
+            }
+            
+            // Try loading volumetric modules
+            log('modules', 'Loading volumetric modules...');
+            try {
+                const ve = await import('./src/visualization/VolumetricEffects.js');
+                log('modules', '✓ VolumetricEffects loaded', 'success');
+            } catch (e) {
+                log('modules', `✗ VolumetricEffects failed: ${e.message}`, 'error');
+                log('errors', `VolumetricEffects: ${e.stack}`, 'error');
+            }
+            
+            // Try loading app
+            log('init', 'Loading app.js...');
+            const { ThomasAttractorApp } = await import('./src/app.js');
+            log('init', '✓ App module loaded', 'success');
+            
+            // Create minimal test instance
+            log('init', 'Creating minimal app instance...');
+            const testApp = new ThomasAttractorApp({
+                mainCanvas: null,
+                floralCanvas: null,
+                controlsContainer: null,
+                maxParticles: 100,
+                enableVolumetricEffects: false
+            });
+            
+            log('init', '✓ App created successfully!', 'success');
+            
+        } catch (error) {
+            log('errors', `Fatal error: ${error.message}`, 'error');
+            log('errors', error.stack, 'error');
+        }
+    </script>
+</body>
+</html>

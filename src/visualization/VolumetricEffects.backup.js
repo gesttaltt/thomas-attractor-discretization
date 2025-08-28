@@ -20,26 +20,10 @@ export class VolumetricEffects {
             ...config
         };
 
-        // OPTIMIZATION: Use circular buffer for memory efficiency
-        const maxPoints = this.config.maxTrajectoryPoints || 50000;
-        this.circularBuffer = {
-            points: new Float32Array(maxPoints * 3),
-            velocities: new Float32Array(maxPoints * 3),
-            times: new Float32Array(maxPoints),
-            writeIndex: 0,
-            size: 0,
-            maxSize: maxPoints
-        };
-        
-        // Cached arrays for current frame (rebuilt from circular buffer)
+        // Raw trajectory data for analysis
         this.trajectoryPoints = [];
         this.trajectoryVelocities = [];
         this.trajectoryTimes = [];
-        
-        // OPTIMIZATION: Spatial hashing for O(n) lookups instead of O(n⁴)
-        this.spatialHash = new Map();
-        this.cellSizeHash = this.config.spatialRange * 2 / 8; // Coarser grid for hashing
-        this.hashCellRadius = 2; // Search radius in hash cells
         
         // Computed field data
         this.densityGrid = new Float32Array(this.config.gridSize ** 3);
@@ -460,40 +444,28 @@ export class VolumetricEffects {
             }
         }
         
-        // OPTIMIZATION: Add points to circular buffer for memory efficiency
-        const currentTime = performance.now();
+        // Add new points to trajectory history for other effects
         newPoints.forEach(point => {
+            this.trajectoryPoints.push([...point]);
+            
+            // Calculate velocity at this point using Thomas attractor equations
             const [x, y, z] = point;
-            
-            // Write to circular buffer
-            const idx = (this.circularBuffer.writeIndex % this.circularBuffer.maxSize) * 3;
-            this.circularBuffer.points[idx] = x;
-            this.circularBuffer.points[idx + 1] = y;
-            this.circularBuffer.points[idx + 2] = z;
-            
-            // Calculate and store velocity
             const vx = Math.sin(y) - this.b * x;
             const vy = Math.sin(z) - this.b * y;
             const vz = Math.sin(x) - this.b * z;
-            this.circularBuffer.velocities[idx] = vx;
-            this.circularBuffer.velocities[idx + 1] = vy;
-            this.circularBuffer.velocities[idx + 2] = vz;
+            this.trajectoryVelocities.push([vx, vy, vz]);
+            this.trajectoryTimes.push(performance.now());
             
-            // Store time
-            this.circularBuffer.times[this.circularBuffer.writeIndex % this.circularBuffer.maxSize] = currentTime;
-            
-            // Update indices
-            this.circularBuffer.writeIndex++;
-            this.circularBuffer.size = Math.min(this.circularBuffer.size + 1, this.circularBuffer.maxSize);
+            // Maintain buffer size
+            if (this.trajectoryPoints.length > this.config.maxTrajectoryPoints) {
+                this.trajectoryPoints.shift();
+                this.trajectoryVelocities.shift();
+                this.trajectoryTimes.shift();
+            }
             
             // Check for Poincaré section crossings
             this.updatePoincareIntersections(point);
         });
-        
-        // Rebuild trajectory arrays from circular buffer (only when needed)
-        if (this.frameCount % this.config.updateInterval === 0) {
-            this.rebuildTrajectoryArrays();
-        }
         
         // Update visualizations periodically
         if (++this.frameCount % this.config.updateInterval === 0) {
@@ -542,121 +514,19 @@ export class VolumetricEffects {
     }
 
     /**
-     * Rebuild trajectory arrays from circular buffer
-     * OPTIMIZATION: Only rebuild when needed for computation
-     */
-    rebuildTrajectoryArrays() {
-        this.trajectoryPoints.length = 0;
-        this.trajectoryVelocities.length = 0;
-        this.trajectoryTimes.length = 0;
-        
-        const size = this.circularBuffer.size;
-        const startIdx = Math.max(0, this.circularBuffer.writeIndex - size);
-        
-        for (let i = 0; i < size; i++) {
-            const bufferIdx = ((startIdx + i) % this.circularBuffer.maxSize) * 3;
-            
-            // Extract point
-            this.trajectoryPoints.push([
-                this.circularBuffer.points[bufferIdx],
-                this.circularBuffer.points[bufferIdx + 1],
-                this.circularBuffer.points[bufferIdx + 2]
-            ]);
-            
-            // Extract velocity
-            this.trajectoryVelocities.push([
-                this.circularBuffer.velocities[bufferIdx],
-                this.circularBuffer.velocities[bufferIdx + 1],
-                this.circularBuffer.velocities[bufferIdx + 2]
-            ]);
-            
-            // Extract time
-            const timeIdx = (startIdx + i) % this.circularBuffer.maxSize;
-            this.trajectoryTimes.push(this.circularBuffer.times[timeIdx]);
-        }
-    }
-
-    /**
-     * Build spatial hash for O(1) point lookups
-     * OPTIMIZATION: Critical performance improvement from O(n⁴) to O(n³)
-     */
-    buildSpatialHash() {
-        this.spatialHash.clear();
-        
-        for (let i = 0; i < this.trajectoryPoints.length; i++) {
-            const [x, y, z] = this.trajectoryPoints[i];
-            const key = this.getHashKey(x, y, z);
-            
-            if (!this.spatialHash.has(key)) {
-                this.spatialHash.set(key, []);
-            }
-            this.spatialHash.get(key).push(i);
-        }
-    }
-    
-    /**
-     * Get hash key for spatial position
-     */
-    getHashKey(x, y, z) {
-        const ix = Math.floor(x / this.cellSizeHash);
-        const iy = Math.floor(y / this.cellSizeHash);
-        const iz = Math.floor(z / this.cellSizeHash);
-        return `${ix},${iy},${iz}`;
-    }
-    
-    /**
-     * Get nearby point indices using spatial hash
-     */
-    getNearbyPointIndices(x, y, z) {
-        const indices = new Set();
-        
-        // Check neighboring hash cells
-        for (let dx = -this.hashCellRadius; dx <= this.hashCellRadius; dx++) {
-            for (let dy = -this.hashCellRadius; dy <= this.hashCellRadius; dy++) {
-                for (let dz = -this.hashCellRadius; dz <= this.hashCellRadius; dz++) {
-                    const key = this.getHashKey(
-                        x + dx * this.cellSizeHash,
-                        y + dy * this.cellSizeHash,
-                        z + dz * this.cellSizeHash
-                    );
-                    
-                    const cellIndices = this.spatialHash.get(key);
-                    if (cellIndices) {
-                        for (const idx of cellIndices) {
-                            indices.add(idx);
-                        }
-                    }
-                }
-            }
-        }
-        
-        return Array.from(indices);
-    }
-
-    /**
-     * OPTIMIZED: Compute velocity field using spatial hashing
-     * Performance: O(n³ × k) where k << n (typically 10-20 points)
-     * Previous: O(n³ × n) where n could be 10,000+ points
-     * Speedup: ~500-1000x
+     * Compute velocity field by interpolating trajectory velocities
      */
     computeVelocityField() {
-        const startTime = performance.now();
         const gridSize = this.config.gridSize;
         const range = this.config.spatialRange;
         const cellSize = (2 * range) / gridSize;
-        
-        // Build spatial hash once per frame
-        this.buildSpatialHash();
         
         // Reset velocity grids
         this.velocityGridX.fill(0);
         this.velocityGridY.fill(0);
         this.velocityGridZ.fill(0);
         
-        // Process grid points with spatial hash optimization
-        let processedCells = 0;
-        const searchRadius2 = (cellSize * 2) ** 2; // Squared for optimization
-        
+        // For each grid point, find nearest trajectory points and interpolate
         for (let i = 0; i < gridSize; i++) {
             for (let j = 0; j < gridSize; j++) {
                 for (let k = 0; k < gridSize; k++) {
@@ -667,43 +537,36 @@ export class VolumetricEffects {
                     const worldY = -range + (j + 0.5) * cellSize;
                     const worldZ = -range + (k + 0.5) * cellSize;
                     
-                    // OPTIMIZATION: Only check nearby points using spatial hash
-                    const nearbyIndices = this.getNearbyPointIndices(worldX, worldY, worldZ);
+                    // Find nearby trajectory points and average their velocities
+                    let sumVx = 0, sumVy = 0, sumVz = 0, count = 0;
+                    const searchRadius = cellSize * 2;
                     
-                    if (nearbyIndices.length === 0) continue;
-                    
-                    let sumVx = 0, sumVy = 0, sumVz = 0, totalWeight = 0;
-                    
-                    for (const idx of nearbyIndices) {
-                        const [px, py, pz] = this.trajectoryPoints[idx];
+                    for (let t = 0; t < this.trajectoryPoints.length; t++) {
+                        const [px, py, pz] = this.trajectoryPoints[t];
+                        const [vx, vy, vz] = this.trajectoryVelocities[t];
                         
-                        // Use squared distance to avoid expensive sqrt
-                        const dist2 = (px - worldX) ** 2 + (py - worldY) ** 2 + (pz - worldZ) ** 2;
+                        const dist = Math.sqrt(
+                            (px - worldX) ** 2 + 
+                            (py - worldY) ** 2 + 
+                            (pz - worldZ) ** 2
+                        );
                         
-                        if (dist2 < searchRadius2) {
-                            const [vx, vy, vz] = this.trajectoryVelocities[idx];
-                            const weight = 1 / (1 + Math.sqrt(dist2));
-                            
+                        if (dist < searchRadius) {
+                            const weight = 1 / (1 + dist);
                             sumVx += vx * weight;
                             sumVy += vy * weight;
                             sumVz += vz * weight;
-                            totalWeight += weight;
+                            count += weight;
                         }
                     }
                     
-                    if (totalWeight > 0) {
-                        this.velocityGridX[gridIndex] = sumVx / totalWeight;
-                        this.velocityGridY[gridIndex] = sumVy / totalWeight;
-                        this.velocityGridZ[gridIndex] = sumVz / totalWeight;
-                        processedCells++;
+                    if (count > 0) {
+                        this.velocityGridX[gridIndex] = sumVx / count;
+                        this.velocityGridY[gridIndex] = sumVy / count;
+                        this.velocityGridZ[gridIndex] = sumVz / count;
                     }
                 }
             }
-        }
-        
-        const elapsed = performance.now() - startTime;
-        if (elapsed > 50) {
-            console.warn(`Velocity field computation slow: ${elapsed.toFixed(1)}ms`);
         }
     }
 

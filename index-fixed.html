@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thomas Attractor - Fixed</title>
+    <meta name="description" content="Interactive Thomas Attractor visualization with simplified, clean architecture">
+    
+    <!-- Three.js CDN - Single version -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            grid-template-rows: 1fr 250px;
+            grid-template-areas: 
+                "main controls"
+                "floral controls";
+        }
+
+        .main-container {
+            grid-area: main;
+            position: relative;
+            background: linear-gradient(45deg, #000011 0%, #001133 100%);
+            border-right: 1px solid rgba(100, 181, 246, 0.2);
+        }
+
+        #mainCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            display: block;
+        }
+
+        #mainCanvas:active {
+            cursor: grabbing;
+        }
+
+        .floral-container {
+            grid-area: floral;
+            background: rgba(15, 15, 25, 0.95);
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            border-right: none;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            transition: all 0.3s ease;
+        }
+
+        .floral-container.collapsed {
+            height: 40px;
+            overflow: hidden;
+        }
+
+        .floral-container.detached {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            height: 300px;
+            z-index: 1000;
+            border: 2px solid rgba(100, 181, 246, 0.5);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            resize: both;
+            overflow: auto;
+        }
+
+        .floral-header {
+            padding: 10px 15px;
+            background: rgba(100, 181, 246, 0.1);
+            border-bottom: 1px solid rgba(100, 181, 246, 0.2);
+            font-size: 14px;
+            font-weight: 600;
+            color: #64b5f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .floral-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .floral-control-btn {
+            background: rgba(100, 181, 246, 0.2);
+            border: 1px solid rgba(100, 181, 246, 0.4);
+            color: #64b5f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .floral-control-btn:hover {
+            background: rgba(100, 181, 246, 0.3);
+            border-color: rgba(100, 181, 246, 0.6);
+        }
+
+        #floralCanvas {
+            flex: 1;
+            width: 100%;
+            background: transparent;
+            min-height: 0;
+        }
+
+        .floral-container.collapsed #floralCanvas {
+            display: none;
+        }
+
+        .controls-container {
+            grid-area: controls;
+            background: rgba(15, 15, 25, 0.98);
+            backdrop-filter: blur(15px);
+            border-left: 1px solid rgba(100, 181, 246, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #64b5f6;
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #64b5f6;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff6b6b;
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 1001;
+            display: none;
+        }
+
+        .success {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            color: #4ade80;
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 1001;
+            display: none;
+            animation: fadeInOut 3s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+
+        @media (max-width: 1200px) {
+            body {
+                grid-template-columns: 1fr 300px;
+            }
+            
+            .floral-container.detached {
+                width: 300px;
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+                grid-template-areas: 
+                    "main"
+                    "controls";
+            }
+            
+            .floral-container {
+                display: none;
+            }
+            
+            .floral-container.detached {
+                display: flex;
+                width: 250px;
+                height: 200px;
+                top: 10px;
+                right: 10px;
+            }
+            
+            .controls-container {
+                max-height: 300px;
+            }
+        }
+
+        .shortcuts {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .shortcuts:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading indicator -->
+    <div class="loading" id="loading">
+        Initializing Thomas Attractor...
+    </div>
+
+    <!-- Error display -->
+    <div class="error" id="error"></div>
+
+    <!-- Success notification -->
+    <div class="success" id="success"></div>
+
+    <!-- Main 3D visualization -->
+    <div class="main-container">
+        <canvas id="mainCanvas"></canvas>
+        
+        <!-- Keyboard shortcuts help -->
+        <div class="shortcuts">
+            <strong>Shortcuts:</strong><br>
+            Space: Play/Pause<br>
+            R: Reset<br>
+            E: Export Image<br>
+            S: Share URL
+        </div>
+    </div>
+
+    <!-- Floral projection -->
+    <div class="floral-container" id="floralContainer">
+        <div class="floral-header" id="floralHeader">
+            <span>🌸 Floral Projection</span>
+            <div class="floral-controls">
+                <button class="floral-control-btn" id="collapseBtn" title="Collapse/Expand">_</button>
+                <button class="floral-control-btn" id="detachBtn" title="Detach/Attach">⇱</button>
+            </div>
+        </div>
+        <canvas id="floralCanvas"></canvas>
+    </div>
+
+    <!-- Control panel -->
+    <div class="controls-container" id="controls">
+        <!-- Controls will be generated by ControlPanel.js -->
+    </div>
+
+    <!-- OrbitControls polyfill -->
+    <script>
+        // Add OrbitControls manually if not loaded from CDN
+        if (typeof THREE !== 'undefined' && !THREE.OrbitControls) {
+            console.log('Adding OrbitControls fallback...');
+            
+            // Simple OrbitControls implementation
+            THREE.OrbitControls = function(camera, domElement) {
+                this.camera = camera;
+                this.domElement = domElement;
+                this.enabled = true;
+                this.enableDamping = true;
+                this.dampingFactor = 0.05;
+                this.autoRotate = false;
+                this.autoRotateSpeed = 1.0;
+                this.enablePan = true;
+                this.enableZoom = true;
+                
+                let spherical = new THREE.Spherical();
+                let sphericalDelta = new THREE.Spherical();
+                let scale = 1;
+                let panOffset = new THREE.Vector3();
+                let rotateStart = new THREE.Vector2();
+                let rotateEnd = new THREE.Vector2();
+                let rotateDelta = new THREE.Vector2();
+                
+                const scope = this;
+                const STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 };
+                let state = STATE.NONE;
+                
+                this.update = function() {
+                    if (scope.autoRotate && state === STATE.NONE) {
+                        sphericalDelta.theta -= 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
+                    }
+                    
+                    spherical.theta += sphericalDelta.theta * scope.dampingFactor;
+                    spherical.phi += sphericalDelta.phi * scope.dampingFactor;
+                    
+                    spherical.makeSafe();
+                    spherical.radius *= scale;
+                    spherical.radius = Math.max(1, Math.min(100, spherical.radius));
+                    
+                    const target = new THREE.Vector3();
+                    target.add(panOffset);
+                    
+                    const position = new THREE.Vector3();
+                    position.setFromSpherical(spherical);
+                    position.add(target);
+                    
+                    scope.camera.position.copy(position);
+                    scope.camera.lookAt(target);
+                    
+                    sphericalDelta.set(0, 0, 0);
+                    panOffset.set(0, 0, 0);
+                    scale = 1;
+                };
+                
+                function onMouseDown(event) {
+                    if (!scope.enabled) return;
+                    
+                    if (event.button === 0) {
+                        state = STATE.ROTATE;
+                        rotateStart.set(event.clientX, event.clientY);
+                    } else if (event.button === 2) {
+                        state = STATE.PAN;
+                    }
+                }
+                
+                function onMouseMove(event) {
+                    if (!scope.enabled) return;
+                    
+                    if (state === STATE.ROTATE) {
+                        rotateEnd.set(event.clientX, event.clientY);
+                        rotateDelta.subVectors(rotateEnd, rotateStart);
+                        
+                        sphericalDelta.theta -= 2 * Math.PI * rotateDelta.x / domElement.clientWidth;
+                        sphericalDelta.phi -= 2 * Math.PI * rotateDelta.y / domElement.clientHeight;
+                        
+                        rotateStart.copy(rotateEnd);
+                        scope.update();
+                    }
+                }
+                
+                function onMouseUp() {
+                    if (!scope.enabled) return;
+                    state = STATE.NONE;
+                }
+                
+                function onWheel(event) {
+                    if (!scope.enabled || !scope.enableZoom) return;
+                    
+                    if (event.deltaY < 0) {
+                        scale *= 0.95;
+                    } else {
+                        scale *= 1.05;
+                    }
+                    
+                    scope.update();
+                    event.preventDefault();
+                }
+                
+                domElement.addEventListener('mousedown', onMouseDown, false);
+                domElement.addEventListener('mousemove', onMouseMove, false);
+                domElement.addEventListener('mouseup', onMouseUp, false);
+                domElement.addEventListener('wheel', onWheel, false);
+                domElement.addEventListener('contextmenu', e => e.preventDefault(), false);
+                
+                // Initialize
+                const position = camera.position.clone();
+                spherical.setFromVector3(position);
+                
+                this.update();
+            };
+        }
+    </script>
+
+    <!-- Application script -->
+    <script type="module">
+        // Import the simplified application
+        import { ThomasAttractorApp } from './src/app.js';
+
+        // Global error handling
+        window.addEventListener('error', (event) => {
+            console.error('Application error:', event.error);
+            showError(`Error: ${event.error.message}`);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            showError(`Promise rejection: ${event.reason}`);
+        });
+
+        // Notification functions
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successEl = document.getElementById('success');
+            successEl.textContent = message;
+            successEl.style.display = 'block';
+            setTimeout(() => {
+                successEl.style.display = 'none';
+            }, 3000);
+        }
+
+        // Floral container controls
+        function setupFloralControls() {
+            const floralContainer = document.getElementById('floralContainer');
+            const floralHeader = document.getElementById('floralHeader');
+            const collapseBtn = document.getElementById('collapseBtn');
+            const detachBtn = document.getElementById('detachBtn');
+            let isCollapsed = false;
+            let isDetached = false;
+            let isDragging = false;
+            let dragOffset = { x: 0, y: 0 };
+            
+            collapseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isCollapsed = !isCollapsed;
+                floralContainer.classList.toggle('collapsed', isCollapsed);
+                collapseBtn.textContent = isCollapsed ? '▣' : '_';
+                collapseBtn.title = isCollapsed ? 'Expand' : 'Collapse';
+            });
+            
+            detachBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isDetached = !isDetached;
+                floralContainer.classList.toggle('detached', isDetached);
+                detachBtn.textContent = isDetached ? '⇲' : '⇱';
+                detachBtn.title = isDetached ? 'Attach' : 'Detach';
+                
+                if (isDetached) {
+                    isCollapsed = false;
+                    floralContainer.classList.remove('collapsed');
+                    collapseBtn.textContent = '_';
+                    collapseBtn.title = 'Collapse';
+                }
+                
+                setTimeout(() => {
+                    if (window.thomasApp && window.thomasApp.floralProjection) {
+                        window.thomasApp.floralProjection.handleResize();
+                    }
+                }, 100);
+            });
+            
+            floralHeader.addEventListener('mousedown', (e) => {
+                if (isDetached && !e.target.classList.contains('floral-control-btn')) {
+                    isDragging = true;
+                    dragOffset.x = e.clientX - floralContainer.offsetLeft;
+                    dragOffset.y = e.clientY - floralContainer.offsetTop;
+                    floralHeader.style.cursor = 'move';
+                    e.preventDefault();
+                }
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging && isDetached) {
+                    const newX = e.clientX - dragOffset.x;
+                    const newY = e.clientY - dragOffset.y;
+                    
+                    const maxX = window.innerWidth - floralContainer.offsetWidth;
+                    const maxY = window.innerHeight - floralContainer.offsetHeight;
+                    
+                    floralContainer.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+                    floralContainer.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+                    floralContainer.style.right = 'auto';
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    floralHeader.style.cursor = 'pointer';
+                }
+            });
+            
+            floralHeader.addEventListener('click', (e) => {
+                if (!isDetached && !e.target.classList.contains('floral-control-btn') && 
+                    (e.target === floralHeader || e.target.tagName === 'SPAN')) {
+                    collapseBtn.click();
+                }
+            });
+        }
+
+        // Initialize application when DOM is ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                console.log('🚀 Starting Thomas Attractor Application...');
+                console.log('THREE.js loaded:', typeof THREE !== 'undefined');
+                console.log('OrbitControls loaded:', typeof THREE !== 'undefined' && THREE.OrbitControls !== undefined);
+                
+                // Hide loading indicator
+                document.getElementById('loading').style.display = 'none';
+                
+                // Setup floral controls first
+                setupFloralControls();
+                
+                // Create application instance
+                window.thomasApp = new ThomasAttractorApp({
+                    mainCanvas: document.getElementById('mainCanvas'),
+                    floralCanvas: document.getElementById('floralCanvas'),
+                    controlsContainer: document.getElementById('controls'),
+                    
+                    // Configuration
+                    maxParticles: 50000,
+                    targetFPS: 60,
+                    stepsPerFrame: 200,
+                    defaultB: 0.19,
+                    defaultDt: 0.005,
+                    enableVolumetricEffects: false
+                });
+
+                // Show success message
+                showSuccess('✅ Application initialized successfully');
+                
+                console.log('✅ Thomas Attractor Application ready');
+                
+                // Expose for debugging
+                window.showError = showError;
+                window.showSuccess = showSuccess;
+
+            } catch (error) {
+                console.error('❌ Failed to initialize application:', error);
+                showError(`Initialization failed: ${error.message}`);
+                
+                // Hide loading indicator even on error
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.thomasApp) {
+                setTimeout(() => {
+                    const event = new Event('resize');
+                    window.dispatchEvent(event);
+                }, 100);
+            }
+        });
+
+        // Performance monitoring
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        function monitorPerformance() {
+            frameCount++;
+            const now = performance.now();
+            
+            if (frameCount % 300 === 0) {
+                const fps = 1000 / (now - lastTime);
+                console.log(`🎯 Performance: ${fps.toFixed(1)} FPS`);
+                
+                if (fps < 20) {
+                    console.warn('⚠️ Low performance detected');
+                }
+                
+                lastTime = now;
+                frameCount = 0;
+            }
+            
+            requestAnimationFrame(monitorPerformance);
+        }
+
+        // Start performance monitoring
+        monitorPerformance();
+    </script>
+</body>
+</html>

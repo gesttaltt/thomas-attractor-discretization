@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔬 Diagnostic Test Runner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1e3a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #00ffcc;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+            font-size: 2em;
+        }
+        
+        .control-panel {
+            background: rgba(20, 25, 40, 0.9);
+            border: 1px solid #00ffcc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #2a5298, #1e3c72);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.running {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-card {
+            background: rgba(20, 25, 40, 0.9);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .test-card.pass {
+            border-color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+        
+        .test-card.fail {
+            border-color: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+        }
+        
+        .test-card.warning {
+            border-color: #ffaa00;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+        }
+        
+        .test-card.running {
+            border-color: #00aaff;
+            box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .test-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #00ffcc;
+        }
+        
+        .test-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending { background: #444; color: #aaa; }
+        .status-running { background: #004466; color: #00aaff; }
+        .status-pass { background: #004400; color: #00ff00; }
+        .status-fail { background: #440000; color: #ff0000; }
+        .status-warning { background: #442200; color: #ffaa00; }
+        
+        .test-details {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .test-details::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .test-details::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .test-details::-webkit-scrollbar-thumb {
+            background: #00ffcc;
+            border-radius: 4px;
+        }
+        
+        .log-entry {
+            padding: 2px 0;
+            font-family: monospace;
+        }
+        
+        .log-pass { color: #00ff00; }
+        .log-fail { color: #ff0000; }
+        .log-warn { color: #ffaa00; }
+        .log-info { color: #00aaff; }
+        .log-data { color: #ff00ff; }
+        
+        .results-panel {
+            background: rgba(20, 25, 40, 0.9);
+            border: 1px solid #00ffcc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .summary-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+        
+        .canvas-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .canvas-wrapper {
+            background: rgba(20, 25, 40, 0.9);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .canvas-title {
+            color: #00ffcc;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 5px;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffcc, #00ff00);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .recommendations {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid #ffaa00;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .recommendations h3 {
+            color: #ffaa00;
+            margin-bottom: 10px;
+        }
+        
+        .recommendations ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .recommendations li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .recommendations li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #ffaa00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Thomas Attractor Diagnostic Test Runner</h1>
+        
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="button-group">
+                <button onclick="runner.runAll()">🚀 Run All Tests</button>
+                <button onclick="runner.runDependencies()">📦 Dependencies Only</button>
+                <button onclick="runner.runMath()">🧮 Math Engine Only</button>
+                <button onclick="runner.runRendering()">🎨 Rendering Only</button>
+                <button onclick="runner.runIntegration()">🔗 Integration Only</button>
+                <button onclick="runner.exportReport()">📊 Export Report</button>
+                <button onclick="runner.clearAll()">🗑️ Clear Results</button>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <!-- Summary Panel -->
+        <div class="results-panel">
+            <h2 style="color: #00ffcc; margin-bottom: 15px;">📊 Test Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-value" id="totalTests">0</div>
+                    <div class="summary-label">Total Tests</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" id="passedTests" style="color: #00ff00;">0</div>
+                    <div class="summary-label">Passed</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" id="failedTests" style="color: #ff0000;">0</div>
+                    <div class="summary-label">Failed</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" id="warningTests" style="color: #ffaa00;">0</div>
+                    <div class="summary-label">Warnings</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" id="testTime">0ms</div>
+                    <div class="summary-label">Execution Time</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value" id="healthScore">0%</div>
+                    <div class="summary-label">Health Score</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Cards Grid -->
+        <div class="test-grid" id="testGrid"></div>
+        
+        <!-- Canvas Test Area -->
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <div class="canvas-title">3D Rendering Test</div>
+                <canvas id="test3D"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <div class="canvas-title">2D Projection Test</div>
+                <canvas id="test2D"></canvas>
+            </div>
+        </div>
+        
+        <!-- Recommendations -->
+        <div class="recommendations" id="recommendations" style="display: none;">
+            <h3>🔧 Recommendations</h3>
+            <ul id="recommendationsList"></ul>
+        </div>
+    </div>
+
+    <script type="module">
+        // Test Runner Class
+        class DiagnosticRunner {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+                this.startTime = 0;
+                this.testApp = null;
+                this.initializeTests();
+                this.renderTestCards();
+            }
+            
+            initializeTests() {
+                this.tests = [
+                    {
+                        id: 'deps',
+                        name: 'Dependencies Check',
+                        description: 'Verify THREE.js, WebGL, and module loading',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.testDependencies()
+                    },
+                    {
+                        id: 'math',
+                        name: 'Mathematical Engine',
+                        description: 'Test Thomas Attractor equations and computation',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.testMathEngine()
+                    },
+                    {
+                        id: 'render3d',
+                        name: '3D Rendering Pipeline',
+                        description: 'Test WebGL context and particle system',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.test3DRendering()
+                    },
+                    {
+                        id: 'render2d',
+                        name: '2D Canvas Rendering',
+                        description: 'Test 2D projection and floral visualization',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.test2DRendering()
+                    },
+                    {
+                        id: 'controls',
+                        name: 'UI Controls',
+                        description: 'Test control panel and parameter management',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.testControls()
+                    },
+                    {
+                        id: 'integration',
+                        name: 'Full Integration',
+                        description: 'Test complete application initialization',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.testIntegration()
+                    },
+                    {
+                        id: 'performance',
+                        name: 'Performance Metrics',
+                        description: 'Measure FPS, memory usage, and optimization',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.testPerformance()
+                    },
+                    {
+                        id: 'data',
+                        name: 'Data Flow',
+                        description: 'Test data pipeline from math to visualization',
+                        status: 'pending',
+                        logs: [],
+                        fn: () => this.testDataFlow()
+                    }
+                ];
+            }
+            
+            renderTestCards() {
+                const grid = document.getElementById('testGrid');
+                grid.innerHTML = '';
+                
+                this.tests.forEach(test => {
+                    const card = document.createElement('div');
+                    card.className = `test-card ${test.status}`;
+                    card.id = `test-${test.id}`;
+                    
+                    card.innerHTML = `
+                        <div class="test-header">
+                            <span class="test-name">${test.name}</span>
+                            <span class="test-status status-${test.status}">${test.status.toUpperCase()}</span>
+                        </div>
+                        <div class="test-details" id="logs-${test.id}">
+                            <div class="log-entry log-info">${test.description}</div>
+                        </div>
+                    `;
+                    
+                    grid.appendChild(card);
+                });
+            }
+            
+            updateTestCard(testId, status, logs) {
+                const card = document.getElementById(`test-${testId}`);
+                const statusEl = card.querySelector('.test-status');
+                const logsEl = document.getElementById(`logs-${testId}`);
+                
+                card.className = `test-card ${status}`;
+                statusEl.className = `test-status status-${status}`;
+                statusEl.textContent = status.toUpperCase();
+                
+                if (logs && logs.length > 0) {
+                    logsEl.innerHTML = logs.map(log => 
+                        `<div class="log-entry log-${log.type}">${log.message}</div>`
+                    ).join('');
+                    logsEl.scrollTop = logsEl.scrollHeight;
+                }
+            }
+            
+            log(testId, message, type = 'info') {
+                const test = this.tests.find(t => t.id === testId);
+                if (test) {
+                    test.logs.push({ message, type, timestamp: Date.now() });
+                    this.updateTestCard(testId, test.status, test.logs);
+                }
+                console.log(`[${testId}] ${message}`);
+            }
+            
+            async runTest(testId) {
+                const test = this.tests.find(t => t.id === testId);
+                if (!test) return false;
+                
+                test.status = 'running';
+                test.logs = [];
+                this.updateTestCard(testId, 'running', []);
+                
+                try {
+                    const result = await test.fn();
+                    test.status = result ? 'pass' : 'fail';
+                    return result;
+                } catch (error) {
+                    this.log(testId, `Error: ${error.message}`, 'fail');
+                    test.status = 'fail';
+                    return false;
+                }
+            }
+            
+            async testDependencies() {
+                const testId = 'deps';
+                
+                // Check THREE.js
+                if (typeof THREE === 'undefined') {
+                    this.log(testId, '❌ THREE.js not loaded', 'fail');
+                    return false;
+                }
+                this.log(testId, `✅ THREE.js loaded (r${THREE.REVISION})`, 'pass');
+                
+                // Check WebGL
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) {
+                    this.log(testId, '❌ WebGL not supported', 'fail');
+                    return false;
+                }
+                this.log(testId, '✅ WebGL supported', 'pass');
+                
+                // Check modules
+                try {
+                    await import('./src/core/ThomasAttractor.js');
+                    this.log(testId, '✅ ThomasAttractor module loaded', 'pass');
+                    
+                    await import('./src/visualization/Renderer3D.js');
+                    this.log(testId, '✅ Renderer3D module loaded', 'pass');
+                    
+                    await import('./src/visualization/FloralProjection.js');
+                    this.log(testId, '✅ FloralProjection module loaded', 'pass');
+                    
+                    return true;
+                } catch (error) {
+                    this.log(testId, `❌ Module load failed: ${error.message}`, 'fail');
+                    return false;
+                }
+            }
+            
+            async testMathEngine() {
+                const testId = 'math';
+                
+                try {
+                    const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+                    const attractor = new ThomasAttractor({ b: 0.19, dt: 0.005 });
+                    this.log(testId, '✅ Attractor created', 'pass');
+                    
+                    // Generate points
+                    const points = [];
+                    for (let i = 0; i < 1000; i++) {
+                        points.push(...attractor.step(1));
+                    }
+                    this.log(testId, `✅ Generated ${points.length} points`, 'pass');
+                    
+                    // Validate points
+                    let invalid = 0;
+                    for (const point of points) {
+                        if (!isFinite(point[0]) || !isFinite(point[1]) || !isFinite(point[2])) {
+                            invalid++;
+                        }
+                    }
+                    
+                    if (invalid > 0) {
+                        this.log(testId, `❌ ${invalid} invalid points detected`, 'fail');
+                        return false;
+                    }
+                    
+                    this.log(testId, '✅ All points valid', 'pass');
+                    
+                    // Check dynamics
+                    let minX = Infinity, maxX = -Infinity;
+                    for (const point of points) {
+                        minX = Math.min(minX, point[0]);
+                        maxX = Math.max(maxX, point[0]);
+                    }
+                    
+                    const range = maxX - minX;
+                    if (range < 0.1) {
+                        this.log(testId, `⚠️ Low dynamics (range: ${range.toFixed(3)})`, 'warn');
+                        return false;
+                    }
+                    
+                    this.log(testId, `✅ Good dynamics (range: ${range.toFixed(2)})`, 'pass');
+                    return true;
+                    
+                } catch (error) {
+                    this.log(testId, `❌ Error: ${error.message}`, 'fail');
+                    return false;
+                }
+            }
+            
+            async test3DRendering() {
+                const testId = 'render3d';
+                
+                try {
+                    const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+                    const canvas = document.getElementById('test3D');
+                    
+                    // Add OrbitControls stub if needed
+                    if (!THREE.OrbitControls) {
+                        THREE.OrbitControls = function() { this.update = () => {}; };
+                    }
+                    
+                    const renderer = new Renderer3D(canvas, {
+                        maxParticles: 1000,
+                        enableVolumetricEffects: false
+                    });
+                    this.log(testId, '✅ Renderer created', 'pass');
+                    
+                    // Check components
+                    if (!renderer.scene) {
+                        this.log(testId, '❌ Scene missing', 'fail');
+                        return false;
+                    }
+                    this.log(testId, '✅ Scene initialized', 'pass');
+                    
+                    if (!renderer.camera) {
+                        this.log(testId, '❌ Camera missing', 'fail');
+                        return false;
+                    }
+                    this.log(testId, '✅ Camera initialized', 'pass');
+                    
+                    if (!renderer.particles) {
+                        this.log(testId, '❌ Particles missing', 'fail');
+                        return false;
+                    }
+                    this.log(testId, '✅ Particle system created', 'pass');
+                    
+                    // Add test points
+                    const points = [];
+                    for (let i = 0; i < 50; i++) {
+                        const angle = (i / 50) * Math.PI * 2;
+                        points.push([Math.cos(angle), Math.sin(angle), i * 0.01]);
+                    }
+                    renderer.addPoints(points);
+                    renderer.render();
+                    
+                    this.log(testId, `✅ Rendered ${points.length} points`, 'pass');
+                    return true;
+                    
+                } catch (error) {
+                    this.log(testId, `❌ Error: ${error.message}`, 'fail');
+                    return false;
+                }
+            }
+            
+            async test2DRendering() {
+                const testId = 'render2d';
+                
+                try {
+                    const { FloralProjection } = await import('./src/visualization/FloralProjection.js');
+                    const canvas = document.getElementById('test2D');
+                    
+                    const floral = new FloralProjection(canvas);
+                    this.log(testId, '✅ FloralProjection created', 'pass');
+                    
+                    if (!floral.ctx) {
+                        this.log(testId, '❌ 2D context missing', 'fail');
+                        return false;
+                    }
+                    this.log(testId, '✅ 2D context initialized', 'pass');
+                    
+                    // Add test points
+                    const points = [];
+                    for (let i = 0; i < 100; i++) {
+                        const angle = (i / 100) * Math.PI * 4;
+                        points.push([Math.cos(angle) * 0.5, Math.sin(angle) * 0.5, 0]);
+                    }
+                    
+                    floral.addPoints(points);
+                    floral.render();
+                    
+                    // Check if anything was drawn
+                    const imageData = floral.ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let pixelsDrawn = 0;
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        if (imageData.data[i] > 0 || imageData.data[i+1] > 0 || imageData.data[i+2] > 0) {
+                            pixelsDrawn++;
+                        }
+                    }
+                    
+                    if (pixelsDrawn === 0) {
+                        this.log(testId, '⚠️ No pixels drawn', 'warn');
+                    } else {
+                        this.log(testId, `✅ Drew ${pixelsDrawn} pixels`, 'pass');
+                    }
+                    
+                    return true;
+                    
+                } catch (error) {
+                    this.log(testId, `❌ Error: ${error.message}`, 'fail');
+                    return false;
+                }
+            }
+            
+            async testControls() {
+                const testId = 'controls';
+                
+                try {
+                    const { ControlPanel } = await import('./src/ui/ControlPanel.js');
+                    
+                    const container = document.createElement('div');
+                    const controls = new ControlPanel(container, {
+                        onParameterChange: () => {},
+                        onPresetSelect: () => {},
+                        onExport: () => {},
+                        onPlayPause: () => {}
+                    });
+                    
+                    this.log(testId, '✅ ControlPanel created', 'pass');
+                    
+                    // Test parameter setting
+                    controls.setParameters({ b: 0.19, dt: 0.005 });
+                    this.log(testId, '✅ Parameters set', 'pass');
+                    
+                    return true;
+                    
+                } catch (error) {
+                    this.log(testId, `❌ Error: ${error.message}`, 'fail');
+                    return false;
+                }
+            }
+            
+            async testIntegration() {
+                const testId = 'integration';
+                
+                try {
+                    const { ThomasAttractorApp } = await import('./src/app.js');
+                    
+                    // Setup OrbitControls stub
+                    if (!THREE.OrbitControls) {
+                        THREE.OrbitControls = function() { 
+                            this.update = () => {};
+                            this.enableDamping = true;
+                            this.autoRotate = false;
+                        };
+                    }
+                    
+                    const app = new ThomasAttractorApp({
+                        mainCanvas: document.getElementById('test3D'),
+                        floralCanvas: document.getElementById('test2D'),
+                        controlsContainer: null,
+                        maxParticles: 500,
+                        stepsPerFrame: 10,
+                        enableVolumetricEffects: false
+                    });
+                    
+                    this.log(testId, '✅ App instantiated', 'pass');
+                    
+                    // Check components
+                    if (!app.attractor) {
+                        this.log(testId, '❌ Attractor not initialized', 'fail');
+                        return false;
+                    }
+                    this.log(testId, '✅ Attractor ready', 'pass');
+                    
+                    if (!app.renderer3D) {
+                        this.log(testId, '❌ 3D renderer not initialized', 'fail');
+                        return false;
+                    }
+                    this.log(testId, '✅ 3D renderer ready', 'pass');
+                    
+                    if (!app.floralProjection) {
+                        this.log(testId, '❌ 2D projection not initialized', 'fail');
+                        return false;
+                    }
+                    this.log(testId, '✅ 2D projection ready', 'pass');
+                    
+                    // Check animation
+                    const stats = app.getStats();
+                    this.log(testId, `📊 Running: ${stats.isRunning}`, stats.isRunning ? 'pass' : 'warn');
+                    
+                    this.testApp = app;
+                    return true;
+                    
+                } catch (error) {
+                    this.log(testId, `❌ Error: ${error.message}`, 'fail');
+                    return false;
+                }
+            }
+            
+            async testPerformance() {
+                const testId = 'performance';
+                
+                if (!this.testApp) {
+                    this.log(testId, '⚠️ App not initialized', 'warn');
+                    return false;
+                }
+                
+                // Let it run
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                const stats = this.testApp.getStats();
+                this.log(testId, `📊 Frames: ${stats.frameCount}`, 'data');
+                this.log(testId, `📊 Particles: ${stats.particleCount}`, 'data');
+                this.log(testId, `📊 FPS: ${stats.performance.fps.toFixed(1)}`, 'data');
+                
+                if (stats.frameCount === 0) {
+                    this.log(testId, '❌ No frames rendered', 'fail');
+                    return false;
+                }
+                
+                if (stats.performance.fps < 10) {
+                    this.log(testId, '⚠️ Low FPS detected', 'warn');
+                }
+                
+                this.log(testId, '✅ Performance acceptable', 'pass');
+                return true;
+            }
+            
+            async testDataFlow() {
+                const testId = 'data';
+                
+                try {
+                    const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+                    const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+                    
+                    // Create pipeline
+                    const attractor = new ThomasAttractor({ b: 0.19, dt: 0.005 });
+                    const points = attractor.step(100);
+                    
+                    this.log(testId, `✅ Generated ${points.length} data points`, 'pass');
+                    
+                    // Verify data structure
+                    if (!Array.isArray(points) || points.length === 0) {
+                        this.log(testId, '❌ Invalid data structure', 'fail');
+                        return false;
+                    }
+                    
+                    const firstPoint = points[0];
+                    if (!Array.isArray(firstPoint) || firstPoint.length !== 3) {
+                        this.log(testId, '❌ Invalid point format', 'fail');
+                        return false;
+                    }
+                    
+                    this.log(testId, '✅ Data structure valid', 'pass');
+                    this.log(testId, `📊 Sample: [${firstPoint[0].toFixed(3)}, ${firstPoint[1].toFixed(3)}, ${firstPoint[2].toFixed(3)}]`, 'data');
+                    
+                    return true;
+                    
+                } catch (error) {
+                    this.log(testId, `❌ Error: ${error.message}`, 'fail');
+                    return false;
+                }
+            }
+            
+            async runAll() {
+                this.clearAll();
+                this.startTime = Date.now();
+                
+                let completed = 0;
+                const total = this.tests.length;
+                
+                for (const test of this.tests) {
+                    await this.runTest(test.id);
+                    completed++;
+                    this.updateProgress((completed / total) * 100);
+                }
+                
+                this.updateSummary();
+                this.generateRecommendations();
+            }
+            
+            async runDependencies() {
+                this.clearAll();
+                await this.runTest('deps');
+                this.updateSummary();
+            }
+            
+            async runMath() {
+                this.clearAll();
+                await this.runTest('math');
+                await this.runTest('data');
+                this.updateSummary();
+            }
+            
+            async runRendering() {
+                this.clearAll();
+                await this.runTest('render3d');
+                await this.runTest('render2d');
+                this.updateSummary();
+            }
+            
+            async runIntegration() {
+                this.clearAll();
+                await this.runTest('integration');
+                await this.runTest('performance');
+                this.updateSummary();
+            }
+            
+            updateProgress(percent) {
+                document.getElementById('progressBar').style.width = `${percent}%`;
+            }
+            
+            updateSummary() {
+                const total = this.tests.length;
+                const passed = this.tests.filter(t => t.status === 'pass').length;
+                const failed = this.tests.filter(t => t.status === 'fail').length;
+                const warnings = this.tests.filter(t => t.status === 'warning').length;
+                const time = Date.now() - this.startTime;
+                const health = Math.round((passed / total) * 100);
+                
+                document.getElementById('totalTests').textContent = total;
+                document.getElementById('passedTests').textContent = passed;
+                document.getElementById('failedTests').textContent = failed;
+                document.getElementById('warningTests').textContent = warnings;
+                document.getElementById('testTime').textContent = `${time}ms`;
+                document.getElementById('healthScore').textContent = `${health}%`;
+                
+                // Color code health score
+                const healthEl = document.getElementById('healthScore');
+                if (health >= 80) {
+                    healthEl.style.color = '#00ff00';
+                } else if (health >= 50) {
+                    healthEl.style.color = '#ffaa00';
+                } else {
+                    healthEl.style.color = '#ff0000';
+                }
+            }
+            
+            generateRecommendations() {
+                const failed = this.tests.filter(t => t.status === 'fail');
+                if (failed.length === 0) return;
+                
+                const recommendations = [];
+                
+                failed.forEach(test => {
+                    switch(test.id) {
+                        case 'deps':
+                            recommendations.push('Ensure THREE.js CDN is accessible');
+                            recommendations.push('Check module import paths');
+                            break;
+                        case 'math':
+                            recommendations.push('Review attractor parameters (b, dt)');
+                            recommendations.push('Check for numerical instabilities');
+                            break;
+                        case 'render3d':
+                            recommendations.push('Verify WebGL context initialization');
+                            recommendations.push('Check particle buffer allocation');
+                            break;
+                        case 'render2d':
+                            recommendations.push('Check 2D canvas context');
+                            recommendations.push('Verify projection calculations');
+                            break;
+                        case 'integration':
+                            recommendations.push('Review component initialization order');
+                            recommendations.push('Check async/await flow');
+                            break;
+                    }
+                });
+                
+                const recDiv = document.getElementById('recommendations');
+                const recList = document.getElementById('recommendationsList');
+                
+                if (recommendations.length > 0) {
+                    recDiv.style.display = 'block';
+                    recList.innerHTML = recommendations.map(r => `<li>${r}</li>`).join('');
+                }
+            }
+            
+            clearAll() {
+                this.tests.forEach(test => {
+                    test.status = 'pending';
+                    test.logs = [];
+                });
+                this.renderTestCards();
+                this.updateProgress(0);
+                document.getElementById('recommendations').style.display = 'none';
+                this.startTime = Date.now();
+            }
+            
+            exportReport() {
+                const report = {
+                    timestamp: new Date().toISOString(),
+                    summary: {
+                        total: this.tests.length,
+                        passed: this.tests.filter(t => t.status === 'pass').length,
+                        failed: this.tests.filter(t => t.status === 'fail').length,
+                        warnings: this.tests.filter(t => t.status === 'warning').length,
+                        executionTime: Date.now() - this.startTime
+                    },
+                    tests: this.tests.map(t => ({
+                        id: t.id,
+                        name: t.name,
+                        status: t.status,
+                        logs: t.logs
+                    }))
+                };
+                
+                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `diagnostic-report-${Date.now()}.json`;
+                a.click();
+            }
+        }
+        
+        // Initialize runner
+        const runner = new DiagnosticRunner();
+        window.runner = runner;
+        
+        // Auto-run on load if requested
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('autorun') === 'true') {
+            setTimeout(() => runner.runAll(), 1000);
+        }
+    </script>
+</body>
+</html>

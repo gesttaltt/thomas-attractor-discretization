@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UI Event Testing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #0f0; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 10px; border: 1px solid #0f0; }
+        .success { color: #0f0; }
+        .fail { color: #f00; }
+        .info { color: #ff0; }
+        #testCanvas { width: 400px; height: 300px; border: 1px solid #0f0; }
+        #testControls { background: rgba(15, 15, 25, 0.98); padding: 20px; }
+    </style>
+</head>
+<body>
+    <h1>UI Event Connection Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Canvas</h2>
+        <canvas id="testCanvas"></canvas>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <div id="testControls"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Event Log</h2>
+        <div id="eventLog"></div>
+    </div>
+
+    <script type="module">
+        const log = (msg, type = 'info') => {
+            const eventLog = document.getElementById('eventLog');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            eventLog.appendChild(entry);
+            console.log(msg);
+        };
+
+        try {
+            // Import modules
+            log('Loading modules...');
+            const { ThomasAttractorApp } = await import('./src/app.js');
+            const { ControlPanel } = await import('./src/ui/ControlPanel.js');
+            
+            // Create a spy object to track all events
+            const eventSpy = {
+                events: [],
+                
+                handleParameterChange(params) {
+                    this.events.push({ type: 'parameterChange', params, time: Date.now() });
+                    log(`✓ Parameter Change: ${JSON.stringify(params)}`, 'success');
+                },
+                
+                handlePresetSelect(presetId) {
+                    this.events.push({ type: 'presetSelect', presetId, time: Date.now() });
+                    log(`✓ Preset Selected: ${presetId}`, 'success');
+                },
+                
+                handleExport(type) {
+                    this.events.push({ type: 'export', exportType: type, time: Date.now() });
+                    log(`✓ Export: ${type}`, 'success');
+                },
+                
+                toggleSimulation() {
+                    this.events.push({ type: 'toggleSimulation', time: Date.now() });
+                    log(`✓ Toggle Simulation`, 'success');
+                    return true;
+                },
+                
+                handleVolumetricChange(params) {
+                    this.events.push({ type: 'volumetricChange', params, time: Date.now() });
+                    log(`✓ Volumetric Change: ${JSON.stringify(params)}`, 'success');
+                }
+            };
+            
+            // Create control panel with spy handlers
+            log('Creating control panel...');
+            const controlPanel = new ControlPanel(document.getElementById('testControls'), {
+                onParameterChange: eventSpy.handleParameterChange.bind(eventSpy),
+                onPresetSelect: eventSpy.handlePresetSelect.bind(eventSpy),
+                onExport: eventSpy.handleExport.bind(eventSpy),
+                onPlayPause: eventSpy.toggleSimulation.bind(eventSpy),
+                onVolumetricChange: eventSpy.handleVolumetricChange.bind(eventSpy)
+            });
+            
+            log('Control panel created', 'success');
+            
+            // Test each control type
+            setTimeout(() => {
+                log('--- TESTING CONTROLS ---', 'info');
+                
+                // Find all sliders
+                const sliders = document.querySelectorAll('input[type="range"]');
+                log(`Found ${sliders.length} sliders`, 'info');
+                
+                sliders.forEach(slider => {
+                    const label = slider.previousElementSibling?.textContent || slider.id || 'unknown';
+                    log(`Testing slider: ${label}`, 'info');
+                    
+                    // Trigger change event
+                    const event = new Event('input', { bubbles: true });
+                    slider.dispatchEvent(event);
+                });
+                
+                // Find all buttons
+                const buttons = document.querySelectorAll('button');
+                log(`Found ${buttons.length} buttons`, 'info');
+                
+                buttons.forEach(button => {
+                    log(`Testing button: ${button.textContent}`, 'info');
+                    button.click();
+                });
+                
+                // Find all selects
+                const selects = document.querySelectorAll('select');
+                log(`Found ${selects.length} selects`, 'info');
+                
+                selects.forEach(select => {
+                    const label = select.previousElementSibling?.textContent || select.id || 'unknown';
+                    log(`Testing select: ${label}`, 'info');
+                    
+                    if (select.options.length > 1) {
+                        select.selectedIndex = 1;
+                        const event = new Event('change', { bubbles: true });
+                        select.dispatchEvent(event);
+                    }
+                });
+                
+                // Find all color inputs
+                const colorInputs = document.querySelectorAll('input[type="color"]');
+                log(`Found ${colorInputs.length} color pickers`, 'info');
+                
+                colorInputs.forEach(input => {
+                    const label = input.previousElementSibling?.textContent || input.id || 'unknown';
+                    log(`Testing color picker: ${label}`, 'info');
+                    
+                    input.value = '#ff0000';
+                    const event = new Event('change', { bubbles: true });
+                    input.dispatchEvent(event);
+                });
+                
+                // Find all checkboxes
+                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                log(`Found ${checkboxes.length} checkboxes`, 'info');
+                
+                checkboxes.forEach(checkbox => {
+                    const label = checkbox.nextElementSibling?.textContent || checkbox.id || 'unknown';
+                    log(`Testing checkbox: ${label}`, 'info');
+                    
+                    checkbox.checked = !checkbox.checked;
+                    const event = new Event('change', { bubbles: true });
+                    checkbox.dispatchEvent(event);
+                });
+                
+                // Summary
+                setTimeout(() => {
+                    log('--- TEST SUMMARY ---', 'info');
+                    log(`Total events captured: ${eventSpy.events.length}`, 'success');
+                    
+                    const eventTypes = {};
+                    eventSpy.events.forEach(e => {
+                        eventTypes[e.type] = (eventTypes[e.type] || 0) + 1;
+                    });
+                    
+                    Object.entries(eventTypes).forEach(([type, count]) => {
+                        log(`${type}: ${count} events`, 'success');
+                    });
+                    
+                    // Test with actual app
+                    log('--- TESTING WITH ACTUAL APP ---', 'info');
+                    testWithRealApp();
+                }, 1000);
+                
+            }, 500);
+            
+            async function testWithRealApp() {
+                try {
+                    const app = new ThomasAttractorApp({
+                        mainCanvas: document.getElementById('testCanvas'),
+                        floralCanvas: null,
+                        controlsContainer: null,
+                        maxParticles: 1000,
+                        enableVolumetricEffects: false
+                    });
+                    
+                    log('Real app created', 'success');
+                    
+                    // Test parameter changes
+                    log('Testing real parameter changes...', 'info');
+                    
+                    app.handleParameterChange({ b: 0.2 });
+                    log('Changed b parameter', 'success');
+                    
+                    app.handleParameterChange({ dt: 0.01 });
+                    log('Changed dt parameter', 'success');
+                    
+                    app.handleParameterChange({ particleSize: 0.02 });
+                    log('Changed particle size', 'success');
+                    
+                    app.handleParameterChange({ particleColor: '#ff00ff' });
+                    log('Changed particle color', 'success');
+                    
+                    app.handleParameterChange({ reset: true });
+                    log('Reset simulation', 'success');
+                    
+                    // Test volumetric changes
+                    log('Testing volumetric changes...', 'info');
+                    
+                    app.handleVolumetricChange({ enableVolumetric: true });
+                    log('Enabled volumetric effects', 'success');
+                    
+                    app.handleVolumetricChange({ densityClouds: true });
+                    log('Enabled density clouds', 'success');
+                    
+                    app.handleVolumetricChange({ cloudsOpacity: 0.5 });
+                    log('Changed clouds opacity', 'success');
+                    
+                    // Test simulation controls
+                    log('Testing simulation controls...', 'info');
+                    
+                    const isRunning = app.toggleSimulation();
+                    log(`Toggled simulation: ${isRunning ? 'running' : 'stopped'}`, 'success');
+                    
+                    // Get stats
+                    const stats = app.getStats();
+                    log(`App stats: particles=${stats.particleCount}, fps=${stats.performance.fps.toFixed(1)}`, 'success');
+                    
+                    log('ALL TESTS COMPLETED SUCCESSFULLY!', 'success');
+                    
+                } catch (error) {
+                    log(`Real app test failed: ${error.message}`, 'fail');
+                }
+            }
+            
+        } catch (error) {
+            log(`CRITICAL ERROR: ${error.message}`, 'fail');
+            log(error.stack, 'fail');
+        }
+    </script>
+</body>
+</html>

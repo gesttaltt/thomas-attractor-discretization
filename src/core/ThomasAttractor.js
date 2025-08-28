@@ -158,6 +158,13 @@ export class ThomasAttractor {
     }
 
     /**
+     * Get current state
+     */
+    getCurrentState() {
+        return [...this.currentState];
+    }
+
+    /**
      * Get recent trajectory points
      */
     getTrajectory(count = 100) {

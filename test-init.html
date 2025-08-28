@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initialization Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .info { color: #ffff00; }
+        canvas { 
+            border: 1px solid #333; 
+            display: block;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>Initialization Test</h2>
+    <div id="status"></div>
+    <canvas id="mainCanvas" width="800" height="600"></canvas>
+    <canvas id="floralCanvas" width="400" height="300"></canvas>
+    <div id="controls"></div>
+    
+    <script type="module">
+        const status = document.getElementById('status');
+        
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            status.appendChild(div);
+            console.log(msg);
+        }
+        
+        // Test 1: Check THREE.js
+        if (typeof THREE === 'undefined') {
+            log('❌ THREE.js not loaded', 'error');
+        } else {
+            log('✅ THREE.js loaded', 'success');
+        }
+        
+        // Test 2: Check OrbitControls
+        if (typeof THREE !== 'undefined' && !THREE.OrbitControls) {
+            log('❌ OrbitControls not loaded', 'error');
+        } else if (typeof THREE !== 'undefined') {
+            log('✅ OrbitControls loaded', 'success');
+        }
+        
+        // Test 3: Try to import modules one by one
+        try {
+            log('Loading ThomasAttractor...', 'info');
+            const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+            log('✅ ThomasAttractor loaded', 'success');
+            
+            const attractor = new ThomasAttractor({ b: 0.19, dt: 0.005 });
+            log('✅ ThomasAttractor instantiated', 'success');
+        } catch (error) {
+            log(`❌ ThomasAttractor error: ${error.message}`, 'error');
+        }
+        
+        try {
+            log('Loading ChaosAnalysis...', 'info');
+            const { ChaosAnalysis } = await import('./src/core/ChaosAnalysis.js');
+            log('✅ ChaosAnalysis loaded', 'success');
+        } catch (error) {
+            log(`❌ ChaosAnalysis error: ${error.message}`, 'error');
+        }
+        
+        try {
+            log('Loading PresetManager...', 'info');
+            const { PresetManager } = await import('./src/core/PresetManager.js');
+            const presetManager = new PresetManager();
+            log('✅ PresetManager created', 'success');
+            
+            await presetManager.loadPresets();
+            log('✅ Presets loaded', 'success');
+        } catch (error) {
+            log(`❌ PresetManager error: ${error.message}`, 'error');
+        }
+        
+        try {
+            log('Loading Renderer3D...', 'info');
+            const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+            log('✅ Renderer3D module loaded', 'success');
+            
+            const canvas = document.getElementById('mainCanvas');
+            const renderer = new Renderer3D(canvas, {
+                maxParticles: 1000,
+                enableVolumetricEffects: false
+            });
+            log('✅ Renderer3D instantiated', 'success');
+        } catch (error) {
+            log(`❌ Renderer3D error: ${error.message}`, 'error');
+            console.error(error);
+        }
+        
+        try {
+            log('Loading FloralProjection...', 'info');
+            const { FloralProjection } = await import('./src/visualization/FloralProjection.js');
+            log('✅ FloralProjection loaded', 'success');
+            
+            const floralCanvas = document.getElementById('floralCanvas');
+            const floral = new FloralProjection(floralCanvas);
+            log('✅ FloralProjection instantiated', 'success');
+        } catch (error) {
+            log(`❌ FloralProjection error: ${error.message}`, 'error');
+        }
+        
+        try {
+            log('Loading ControlPanel...', 'info');
+            const { ControlPanel } = await import('./src/ui/ControlPanel.js');
+            log('✅ ControlPanel loaded', 'success');
+            
+            const controlsDiv = document.getElementById('controls');
+            const controls = new ControlPanel(controlsDiv, {
+                onParameterChange: () => {},
+                onPresetSelect: () => {},
+                onExport: () => {},
+                onPlayPause: () => {}
+            });
+            log('✅ ControlPanel instantiated', 'success');
+        } catch (error) {
+            log(`❌ ControlPanel error: ${error.message}`, 'error');
+        }
+        
+        // Test 4: Try to create the full app
+        try {
+            log('Loading ThomasAttractorApp...', 'info');
+            const { ThomasAttractorApp } = await import('./src/app.js');
+            log('✅ App module loaded', 'success');
+            
+            const app = new ThomasAttractorApp({
+                mainCanvas: document.getElementById('mainCanvas'),
+                floralCanvas: document.getElementById('floralCanvas'),
+                controlsContainer: document.getElementById('controls'),
+                maxParticles: 1000,
+                enableVolumetricEffects: false
+            });
+            log('✅ App instantiated successfully!', 'success');
+            
+        } catch (error) {
+            log(`❌ App error: ${error.message}`, 'error');
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

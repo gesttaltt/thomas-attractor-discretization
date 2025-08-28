@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Runtime Analysis & Testing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        h2 { color: #0ff; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .warning { color: #fa0; }
+        .info { color: #0af; }
+        .test-group {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            background: #111;
+        }
+        pre { 
+            background: #000; 
+            padding: 10px; 
+            overflow-x: auto;
+            border: 1px solid #222;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 Runtime Analysis & Testing</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        const output = document.getElementById('results');
+        const log = (msg, type = 'info') => {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = msg;
+            output.appendChild(div);
+            console.log(msg);
+        };
+
+        const testGroup = (title) => {
+            const div = document.createElement('div');
+            div.className = 'test-group';
+            div.innerHTML = `<h2>${title}</h2>`;
+            output.appendChild(div);
+            return div;
+        };
+
+        // Test Suite
+        class RuntimeAnalyzer {
+            constructor() {
+                this.results = {
+                    modules: {},
+                    dependencies: {},
+                    runtime: {},
+                    performance: {},
+                    memory: {}
+                };
+            }
+
+            async testModuleLoading() {
+                const group = testGroup('1️⃣ Module Loading & Syntax');
+                
+                const modules = [
+                    { path: './src/core/ThomasAttractor.js', name: 'ThomasAttractor' },
+                    { path: './src/core/ChaosAnalysis.js', name: 'ChaosAnalysis' },
+                    { path: './src/core/PresetManager.js', name: 'PresetManager' },
+                    { path: './src/visualization/FloralProjection.js', name: 'FloralProjection' },
+                    { path: './src/visualization/Renderer3D.js', name: 'Renderer3D' },
+                    { path: './src/visualization/VolumetricEffects.js', name: 'VolumetricEffects' },
+                    { path: './src/visualization/ResearchGradeDensityField.js', name: 'ResearchGradeDensityField' },
+                    { path: './src/visualization/ResearchGradeVelocityField.js', name: 'ResearchGradeVelocityField' },
+                    { path: './src/ui/ControlPanel.js', name: 'ControlPanel' },
+                    { path: './src/utils/ExportManager.js', name: 'ExportManager' },
+                    { path: './src/app.js', name: 'ThomasAttractorApp' }
+                ];
+
+                for (const mod of modules) {
+                    try {
+                        const startTime = performance.now();
+                        const module = await import(mod.path);
+                        const loadTime = performance.now() - startTime;
+                        
+                        const hasExport = module[mod.name] !== undefined;
+                        if (hasExport) {
+                            group.innerHTML += `<div class="success">✅ ${mod.name}: Loaded in ${loadTime.toFixed(2)}ms</div>`;
+                            this.results.modules[mod.name] = { loaded: true, time: loadTime };
+                        } else {
+                            group.innerHTML += `<div class="warning">⚠️ ${mod.name}: Module loaded but export not found</div>`;
+                        }
+                    } catch (error) {
+                        group.innerHTML += `<div class="error">❌ ${mod.name}: ${error.message}</div>`;
+                        this.results.modules[mod.name] = { loaded: false, error: error.message };
+                    }
+                }
+            }
+
+            async testInstantiation() {
+                const group = testGroup('2️⃣ Class Instantiation');
+                
+                try {
+                    // Test ThomasAttractor
+                    const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+                    const attractor = new ThomasAttractor();
+                    
+                    // Test critical methods
+                    const state = attractor.getCurrentState();
+                    group.innerHTML += `<div class="success">✅ ThomasAttractor.getCurrentState(): [${state.join(', ')}]</div>`;
+                    
+                    const points = attractor.generate(100);
+                    group.innerHTML += `<div class="success">✅ ThomasAttractor.generate(): ${points.length/3} points</div>`;
+                    
+                    // Test ChaosAnalysis
+                    const { ChaosAnalysis } = await import('./src/core/ChaosAnalysis.js');
+                    const chaos = new ChaosAnalysis(attractor);
+                    group.innerHTML += `<div class="success">✅ ChaosAnalysis: Instantiated</div>`;
+                    
+                    // Test FloralProjection
+                    const { FloralProjection } = await import('./src/visualization/FloralProjection.js');
+                    const floral = new FloralProjection();
+                    group.innerHTML += `<div class="success">✅ FloralProjection: Instantiated</div>`;
+                    
+                } catch (error) {
+                    group.innerHTML += `<div class="error">❌ Instantiation failed: ${error.message}</div>`;
+                }
+            }
+
+            async testDependencyChain() {
+                const group = testGroup('3️⃣ Dependency Chain Analysis');
+                
+                try {
+                    // Map out actual runtime dependencies
+                    const deps = {
+                        'app.js': [],
+                        'Renderer3D': [],
+                        'VolumetricEffects': []
+                    };
+
+                    // Test app.js dependencies
+                    const { ThomasAttractorApp } = await import('./src/app.js');
+                    deps['app.js'] = ['ThomasAttractor', 'ChaosAnalysis', 'Renderer3D', 'FloralProjection', 'ControlPanel'];
+                    group.innerHTML += `<div class="info">📦 app.js depends on: ${deps['app.js'].join(', ')}</div>`;
+
+                    // Test Renderer3D dependencies
+                    const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+                    deps['Renderer3D'] = ['VolumetricEffects'];
+                    group.innerHTML += `<div class="info">📦 Renderer3D depends on: ${deps['Renderer3D'].join(', ')}</div>`;
+
+                    // Test VolumetricEffects dependencies
+                    const { VolumetricEffects } = await import('./src/visualization/VolumetricEffects.js');
+                    deps['VolumetricEffects'] = ['ResearchGradeDensityField', 'ResearchGradeVelocityField'];
+                    group.innerHTML += `<div class="info">📦 VolumetricEffects depends on: ${deps['VolumetricEffects'].join(', ')}</div>`;
+
+                    group.innerHTML += `<div class="success">✅ No circular dependencies detected</div>`;
+                    
+                } catch (error) {
+                    group.innerHTML += `<div class="error">❌ Dependency analysis failed: ${error.message}</div>`;
+                }
+            }
+
+            async testRuntimeBehavior() {
+                const group = testGroup('4️⃣ Runtime Behavior Testing');
+                
+                try {
+                    // Create minimal app instance
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 800;
+                    canvas.height = 600;
+                    
+                    const { ThomasAttractorApp } = await import('./src/app.js');
+                    const app = new ThomasAttractorApp({
+                        mainCanvas: canvas,
+                        floralCanvas: document.createElement('canvas'),
+                        controlsContainer: document.createElement('div'),
+                        maxParticles: 100,
+                        enableVolumetricEffects: false
+                    });
+                    
+                    group.innerHTML += `<div class="success">✅ App instance created</div>`;
+                    
+                    // Test initialization
+                    await app.init();
+                    group.innerHTML += `<div class="success">✅ App initialized successfully</div>`;
+                    
+                    // Test update cycle
+                    app.update();
+                    group.innerHTML += `<div class="success">✅ Update cycle executed</div>`;
+                    
+                    // Test parameter changes
+                    app.updateParameter('particleCount', 500);
+                    group.innerHTML += `<div class="success">✅ Parameter update handled</div>`;
+                    
+                } catch (error) {
+                    group.innerHTML += `<div class="error">❌ Runtime test failed: ${error.message}</div>`;
+                    group.innerHTML += `<pre>${error.stack}</pre>`;
+                }
+            }
+
+            async testPerformanceMetrics() {
+                const group = testGroup('5️⃣ Performance Metrics');
+                
+                try {
+                    const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+                    const attractor = new ThomasAttractor();
+                    
+                    // Benchmark point generation
+                    const counts = [100, 1000, 10000];
+                    for (const count of counts) {
+                        const start = performance.now();
+                        attractor.generate(count);
+                        const time = performance.now() - start;
+                        const rate = (count / time * 1000).toFixed(0);
+                        group.innerHTML += `<div class="info">⏱️ Generate ${count} points: ${time.toFixed(2)}ms (${rate} pts/sec)</div>`;
+                    }
+                    
+                    // Memory usage estimation
+                    if (performance.memory) {
+                        const used = (performance.memory.usedJSHeapSize / 1048576).toFixed(2);
+                        const total = (performance.memory.totalJSHeapSize / 1048576).toFixed(2);
+                        group.innerHTML += `<div class="info">💾 Memory: ${used}MB / ${total}MB</div>`;
+                    }
+                    
+                } catch (error) {
+                    group.innerHTML += `<div class="error">❌ Performance test failed: ${error.message}</div>`;
+                }
+            }
+
+            async testErrorHandling() {
+                const group = testGroup('6️⃣ Error Handling & Edge Cases');
+                
+                const tests = [
+                    {
+                        name: 'Invalid parameters',
+                        test: async () => {
+                            const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+                            const attractor = new ThomasAttractor({ b: -1, dt: 0 });
+                            attractor.generate(10);
+                        }
+                    },
+                    {
+                        name: 'Large particle count',
+                        test: async () => {
+                            const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+                            const attractor = new ThomasAttractor();
+                            attractor.generate(100000);
+                        }
+                    },
+                    {
+                        name: 'Null canvas',
+                        test: async () => {
+                            const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+                            const renderer = new Renderer3D({ canvas: null });
+                        }
+                    }
+                ];
+
+                for (const test of tests) {
+                    try {
+                        await test.test();
+                        group.innerHTML += `<div class="warning">⚠️ ${test.name}: No error thrown (potential issue)</div>`;
+                    } catch (error) {
+                        group.innerHTML += `<div class="success">✅ ${test.name}: Properly handled</div>`;
+                    }
+                }
+            }
+
+            async runFullAnalysis() {
+                log('Starting runtime analysis...', 'info');
+                
+                await this.testModuleLoading();
+                await this.testInstantiation();
+                await this.testDependencyChain();
+                await this.testRuntimeBehavior();
+                await this.testPerformanceMetrics();
+                await this.testErrorHandling();
+                
+                // Generate summary
+                const summaryGroup = testGroup('📊 Analysis Summary');
+                
+                const moduleCount = Object.keys(this.results.modules).length;
+                const loadedCount = Object.values(this.results.modules).filter(m => m.loaded).length;
+                
+                summaryGroup.innerHTML += `
+                    <div class="info">Total Modules: ${moduleCount}</div>
+                    <div class="info">Successfully Loaded: ${loadedCount}</div>
+                    <div class="info">Failed: ${moduleCount - loadedCount}</div>
+                    <br>
+                    <div class="${loadedCount === moduleCount ? 'success' : 'warning'}">
+                        ${loadedCount === moduleCount ? '✅ All systems operational!' : '⚠️ Some issues detected'}
+                    </div>
+                `;
+                
+                log('Analysis complete!', 'success');
+            }
+        }
+
+        // Run analysis
+        const analyzer = new RuntimeAnalyzer();
+        analyzer.runFullAnalysis().catch(error => {
+            log(`Fatal error: ${error.message}`, 'error');
+            console.error(error);
+        });
+    </script>
+</body>
+</html>

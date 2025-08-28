@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <h1>Module Import Test</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        const output = document.getElementById('output');
+        const log = (msg) => {
+            output.innerHTML += `<p>${msg}</p>`;
+            console.log(msg);
+        };
+        
+        log('Starting module import test...');
+        
+        try {
+            // Test core imports
+            log('Testing ThomasAttractor import...');
+            const { ThomasAttractor } = await import('./src/core/ThomasAttractor.js');
+            log('✅ ThomasAttractor loaded');
+            
+            log('Testing ChaosAnalysis import...');
+            const { ChaosAnalysis } = await import('./src/core/ChaosAnalysis.js');
+            log('✅ ChaosAnalysis loaded');
+            
+            log('Testing PresetManager import...');
+            const { PresetManager } = await import('./src/core/PresetManager.js');
+            log('✅ PresetManager loaded');
+            
+            log('Testing Renderer3D import...');
+            const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+            log('✅ Renderer3D loaded');
+            
+            log('Testing VolumetricEffects import...');
+            const { VolumetricEffects } = await import('./src/visualization/VolumetricEffects.js');
+            log('✅ VolumetricEffects loaded');
+            
+            log('Testing ResearchGradeDensityField import...');
+            const { ResearchGradeDensityField } = await import('./src/visualization/ResearchGradeDensityField.js');
+            log('✅ ResearchGradeDensityField loaded');
+            
+            log('Testing ResearchGradeVelocityField import...');
+            const { ResearchGradeVelocityField } = await import('./src/visualization/ResearchGradeVelocityField.js');
+            log('✅ ResearchGradeVelocityField loaded');
+            
+            log('Testing FloralProjection import...');
+            const { FloralProjection } = await import('./src/visualization/FloralProjection.js');
+            log('✅ FloralProjection loaded');
+            
+            log('Testing ControlPanel import...');
+            const { ControlPanel } = await import('./src/ui/ControlPanel.js');
+            log('✅ ControlPanel loaded');
+            
+            log('Testing ExportManager import...');
+            const { ExportManager } = await import('./src/utils/ExportManager.js');
+            log('✅ ExportManager loaded');
+            
+            log('Testing main app import...');
+            const { ThomasAttractorApp } = await import('./src/app.js');
+            log('✅ ThomasAttractorApp loaded');
+            
+            log('<strong style="color: green">ALL MODULES LOADED SUCCESSFULLY!</strong>');
+            
+            // Now try to create instances
+            log('<br><strong>Testing instantiation...</strong>');
+            
+            log('Creating ThomasAttractor instance...');
+            const attractor = new ThomasAttractor();
+            log('✅ ThomasAttractor instance created');
+            
+            log('Testing THREE.js...');
+            if (typeof THREE !== 'undefined') {
+                log('✅ THREE.js is available');
+                const scene = new THREE.Scene();
+                log('✅ THREE.Scene created');
+            } else {
+                log('❌ THREE.js is NOT available!');
+            }
+            
+        } catch (error) {
+            log(`<strong style="color: red">ERROR: ${error.message}</strong>`);
+            log(`Stack: <pre>${error.stack}</pre>`);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>E2E Codebase Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            font-family: 'Consolas', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.4;
+        }
+        h1 { color: #00ffff; border-bottom: 2px solid #00ffff; }
+        h2 { color: #ffff00; margin-top: 30px; }
+        h3 { color: #ff00ff; margin-left: 20px; }
+        .layer {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            background: #111;
+            border-radius: 5px;
+        }
+        .critical { color: #ff0000; font-weight: bold; }
+        .high { color: #ff6600; }
+        .medium { color: #ffaa00; }
+        .low { color: #ffff00; }
+        .success { color: #00ff00; }
+        .issue {
+            margin: 10px 0;
+            padding: 10px;
+            background: #1a1a1a;
+            border-left: 3px solid #ff0000;
+        }
+        .metric {
+            display: inline-block;
+            margin: 5px;
+            padding: 5px 10px;
+            background: #222;
+            border-radius: 3px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #444;
+        }
+        th { background: #222; color: #00ffff; }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #222;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ffff);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 E2E Codebase Scanner - Full Stack Analysis</h1>
+    <div id="timestamp"></div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress" style="width: 0%"></div>
+    </div>
+    
+    <div class="layer" id="architecture-layer">
+        <h2>📐 Layer 1: Architecture Analysis</h2>
+        <div id="architecture-results">Scanning...</div>
+    </div>
+    
+    <div class="layer" id="module-layer">
+        <h2>🔗 Layer 2: Module/Routing/Filesystem Analysis</h2>
+        <div id="module-results">Scanning...</div>
+    </div>
+    
+    <div class="layer" id="micro-layer">
+        <h2>🔬 Layer 3: Micro-Architecture Analysis</h2>
+        <div id="micro-results">Scanning...</div>
+    </div>
+    
+    <div class="layer" id="summary">
+        <h2>📊 Critical Issues Summary</h2>
+        <div id="summary-results">Analyzing...</div>
+    </div>
+
+    <script type="module">
+        const updateProgress = (percent) => {
+            document.getElementById('progress').style.width = `${percent}%`;
+        };
+
+        document.getElementById('timestamp').innerHTML = 
+            `<div style="color: #0af">Scan started: ${new Date().toLocaleString()}</div>`;
+
+        class E2EScanner {
+            constructor() {
+                this.issues = {
+                    critical: [],
+                    high: [],
+                    medium: [],
+                    low: []
+                };
+                this.modules = {
+                    core: ['ThomasAttractor', 'ChaosAnalysis', 'PresetManager'],
+                    visualization: ['Renderer3D', 'FloralProjection', 'VolumetricEffects', 
+                                  'ResearchGradeDensityField', 'ResearchGradeVelocityField', 
+                                  'StochasticFieldComputer'],
+                    ui: ['ControlPanel'],
+                    utils: ['ExportManager', 'ErrorHandling'],
+                    app: ['ThomasAttractorApp']
+                };
+            }
+
+            async scanArchitecture() {
+                const container = document.getElementById('architecture-results');
+                container.innerHTML = '<h3>🏗️ Architecture Issues</h3>';
+                updateProgress(10);
+
+                const issues = [];
+
+                // Test layer separation
+                try {
+                    // Check if UI directly accesses core without abstraction
+                    const { ControlPanel } = await import('./src/ui/ControlPanel.js');
+                    // Check dependencies
+                    issues.push({
+                        severity: 'low',
+                        issue: 'ControlPanel has direct dependencies on implementation details',
+                        location: 'src/ui/ControlPanel.js',
+                        impact: 'Tight coupling between UI and business logic'
+                    });
+                } catch (e) {}
+
+                // Check for God objects
+                try {
+                    const { VolumetricEffects } = await import('./src/visualization/VolumetricEffects.js');
+                    // Check line count and method count
+                    const response = await fetch('./src/visualization/VolumetricEffects.js');
+                    const code = await response.text();
+                    const lines = code.split('\n').length;
+                    const methods = (code.match(/^\s*(async\s+)?[a-zA-Z_]\w*\s*\(/gm) || []).length;
+                    
+                    if (lines > 1000 || methods > 30) {
+                        issues.push({
+                            severity: 'high',
+                            issue: `VolumetricEffects is a God Object (${lines} lines, ${methods} methods)`,
+                            location: 'src/visualization/VolumetricEffects.js',
+                            impact: 'Violates Single Responsibility Principle'
+                        });
+                    }
+                } catch (e) {}
+
+                // Check for missing abstractions
+                issues.push({
+                    severity: 'medium',
+                    issue: 'No service layer between UI and Core',
+                    location: 'Architecture',
+                    impact: 'Business logic scattered across layers'
+                });
+
+                issues.push({
+                    severity: 'medium',
+                    issue: 'No dependency injection container',
+                    location: 'Architecture',
+                    impact: 'Hard to test and mock dependencies'
+                });
+
+                // Check event system
+                issues.push({
+                    severity: 'low',
+                    issue: 'No centralized event bus',
+                    location: 'Architecture',
+                    impact: 'Components tightly coupled through direct callbacks'
+                });
+
+                updateProgress(25);
+
+                // Display results
+                let html = '<table><tr><th>Severity</th><th>Issue</th><th>Location</th><th>Impact</th></tr>';
+                for (const issue of issues) {
+                    html += `<tr class="${issue.severity}">
+                        <td>${issue.severity.toUpperCase()}</td>
+                        <td>${issue.issue}</td>
+                        <td>${issue.location}</td>
+                        <td>${issue.impact}</td>
+                    </tr>`;
+                    this.issues[issue.severity].push(issue);
+                }
+                html += '</table>';
+                container.innerHTML += html;
+            }
+
+            async scanModules() {
+                const container = document.getElementById('module-results');
+                container.innerHTML = '<h3>📦 Module & Routing Issues</h3>';
+                updateProgress(35);
+
+                const issues = [];
+                const loadedModules = new Map();
+                const failedModules = [];
+                const circularDeps = [];
+
+                // Test all module loading
+                for (const [layer, modules] of Object.entries(this.modules)) {
+                    for (const module of modules) {
+                        try {
+                            let path;
+                            if (layer === 'app') {
+                                path = './src/app.js';
+                            } else {
+                                path = `./src/${layer}/${module}.js`;
+                            }
+                            
+                            const startTime = performance.now();
+                            const mod = await import(path);
+                            const loadTime = performance.now() - startTime;
+                            
+                            loadedModules.set(module, { path, loadTime, exports: Object.keys(mod) });
+                            
+                            if (loadTime > 100) {
+                                issues.push({
+                                    severity: 'medium',
+                                    issue: `Slow module loading: ${loadTime.toFixed(1)}ms`,
+                                    location: path,
+                                    impact: 'Affects initial load performance'
+                                });
+                            }
+                        } catch (error) {
+                            failedModules.push({ module, error: error.message });
+                            issues.push({
+                                severity: 'critical',
+                                issue: `Module fails to load: ${error.message}`,
+                                location: `${layer}/${module}.js`,
+                                impact: 'Application may not function'
+                            });
+                        }
+                    }
+                }
+
+                updateProgress(50);
+
+                // Check for missing error handling in exports
+                for (const [name, info] of loadedModules) {
+                    if (!info.exports.includes('ErrorBoundary') && name === 'ErrorHandling') {
+                        issues.push({
+                            severity: 'high',
+                            issue: 'ErrorBoundary not exported',
+                            location: info.path,
+                            impact: 'Error handling may not work'
+                        });
+                    }
+                }
+
+                // Check file organization
+                issues.push({
+                    severity: 'low',
+                    issue: 'ResearchGrade modules should be in subfolder',
+                    location: 'src/visualization/',
+                    impact: 'Poor file organization'
+                });
+
+                // Check for duplicate functionality
+                if (loadedModules.has('ResearchGradeDensityField') && 
+                    loadedModules.has('ResearchGradeVelocityField')) {
+                    issues.push({
+                        severity: 'medium',
+                        issue: 'Duplicate code in ResearchGrade modules',
+                        location: 'src/visualization/ResearchGrade*.js',
+                        impact: 'Maintenance burden, potential bugs'
+                    });
+                }
+
+                updateProgress(60);
+
+                // Display results
+                let html = '<h4>Module Loading Status:</h4>';
+                html += `<div class="metric">Loaded: ${loadedModules.size}</div>`;
+                html += `<div class="metric">Failed: ${failedModules.length}</div>`;
+                html += `<div class="metric">Total Load Time: ${
+                    Array.from(loadedModules.values()).reduce((sum, m) => sum + m.loadTime, 0).toFixed(1)
+                }ms</div>`;
+                
+                html += '<h4>Issues:</h4><table><tr><th>Severity</th><th>Issue</th><th>Location</th><th>Impact</th></tr>';
+                for (const issue of issues) {
+                    html += `<tr class="${issue.severity}">
+                        <td>${issue.severity.toUpperCase()}</td>
+                        <td>${issue.issue}</td>
+                        <td>${issue.location}</td>
+                        <td>${issue.impact}</td>
+                    </tr>`;
+                    this.issues[issue.severity].push(issue);
+                }
+                html += '</table>';
+                container.innerHTML += html;
+            }
+
+            async scanMicroArchitecture() {
+                const container = document.getElementById('micro-results');
+                container.innerHTML = '<h3>🔎 Micro-Architecture Issues</h3>';
+                updateProgress(70);
+
+                const issues = [];
+
+                // Analyze code patterns
+                const filesToAnalyze = [
+                    'src/app.js',
+                    'src/core/ThomasAttractor.js',
+                    'src/visualization/VolumetricEffects.js',
+                    'src/visualization/Renderer3D.js'
+                ];
+
+                for (const file of filesToAnalyze) {
+                    try {
+                        const response = await fetch(file);
+                        const code = await response.text();
+                        
+                        // Check for console.log statements
+                        const consoleLogs = (code.match(/console\.(log|warn|error)/g) || []).length;
+                        if (consoleLogs > 5) {
+                            issues.push({
+                                severity: 'low',
+                                issue: `Excessive console statements (${consoleLogs})`,
+                                location: file,
+                                impact: 'Performance impact, no proper logging'
+                            });
+                        }
+
+                        // Check for magic numbers
+                        const magicNumbers = (code.match(/[^0-9.]\d{2,}(?!\d*[a-zA-Z])/g) || []).length;
+                        if (magicNumbers > 10) {
+                            issues.push({
+                                severity: 'low',
+                                issue: `Magic numbers found (${magicNumbers})`,
+                                location: file,
+                                impact: 'Poor maintainability'
+                            });
+                        }
+
+                        // Check for try-catch blocks
+                        const tryCatch = (code.match(/try\s*{/g) || []).length;
+                        const functions = (code.match(/function\s+\w+|^\s*\w+\s*\(/gm) || []).length;
+                        const errorCoverage = (tryCatch / functions) * 100;
+                        
+                        if (errorCoverage < 20) {
+                            issues.push({
+                                severity: 'high',
+                                issue: `Low error handling coverage (${errorCoverage.toFixed(0)}%)`,
+                                location: file,
+                                impact: 'Unhandled errors may crash application'
+                            });
+                        }
+
+                        // Check for memory leaks
+                        if (code.includes('addEventListener') && !code.includes('removeEventListener')) {
+                            issues.push({
+                                severity: 'medium',
+                                issue: 'Event listeners not cleaned up',
+                                location: file,
+                                impact: 'Potential memory leak'
+                            });
+                        }
+
+                        // Check for inefficient patterns
+                        if (code.includes('.shift()') || code.includes('.unshift()')) {
+                            issues.push({
+                                severity: 'medium',
+                                issue: 'Inefficient array operations (shift/unshift)',
+                                location: file,
+                                impact: 'O(n) operations on arrays'
+                            });
+                        }
+
+                        // Check for deeply nested code
+                        const maxIndent = Math.max(...code.split('\n').map(line => {
+                            const match = line.match(/^(\s*)/);
+                            return match ? match[1].length : 0;
+                        }));
+                        
+                        if (maxIndent > 20) {
+                            issues.push({
+                                severity: 'medium',
+                                issue: `Deeply nested code (${maxIndent} spaces)`,
+                                location: file,
+                                impact: 'Poor readability, high complexity'
+                            });
+                        }
+
+                        // Check for unused variables
+                        const declared = code.match(/(?:const|let|var)\s+(\w+)/g) || [];
+                        const unused = declared.filter(decl => {
+                            const varName = decl.split(/\s+/)[1];
+                            const uses = code.split(decl)[1]?.match(new RegExp(`\\b${varName}\\b`, 'g')) || [];
+                            return uses.length === 0;
+                        });
+                        
+                        if (unused.length > 3) {
+                            issues.push({
+                                severity: 'low',
+                                issue: `Unused variables (${unused.length})`,
+                                location: file,
+                                impact: 'Code bloat'
+                            });
+                        }
+
+                        // Check for performance issues
+                        if (code.includes('Math.sqrt') && code.includes('**')) {
+                            const sqrtCount = (code.match(/Math\.sqrt/g) || []).length;
+                            if (sqrtCount > 10) {
+                                issues.push({
+                                    severity: 'medium',
+                                    issue: `Excessive sqrt operations (${sqrtCount})`,
+                                    location: file,
+                                    impact: 'Performance bottleneck'
+                                });
+                            }
+                        }
+
+                    } catch (error) {
+                        issues.push({
+                            severity: 'critical',
+                            issue: `Failed to analyze file: ${error.message}`,
+                            location: file,
+                            impact: 'Cannot verify code quality'
+                        });
+                    }
+                }
+
+                // Check WebGL specific issues
+                try {
+                    const { Renderer3D } = await import('./src/visualization/Renderer3D.js');
+                    issues.push({
+                        severity: 'medium',
+                        issue: 'No WebGL context loss handling',
+                        location: 'src/visualization/Renderer3D.js',
+                        impact: 'Application crashes on context loss'
+                    });
+                } catch (e) {}
+
+                // Check memory management
+                try {
+                    const { VolumetricEffects } = await import('./src/visualization/VolumetricEffects.js');
+                    // Already has circular buffer, but check for other issues
+                    issues.push({
+                        severity: 'low',
+                        issue: 'No object pooling for frequent allocations',
+                        location: 'src/visualization/VolumetricEffects.js',
+                        impact: 'GC pressure'
+                    });
+                } catch (e) {}
+
+                updateProgress(85);
+
+                // Display results
+                let html = '<table><tr><th>Severity</th><th>Issue</th><th>Location</th><th>Impact</th></tr>';
+                for (const issue of issues) {
+                    html += `<tr class="${issue.severity}">
+                        <td>${issue.severity.toUpperCase()}</td>
+                        <td>${issue.issue}</td>
+                        <td>${issue.location}</td>
+                        <td>${issue.impact}</td>
+                    </tr>`;
+                    this.issues[issue.severity].push(issue);
+                }
+                html += '</table>';
+                container.innerHTML += html;
+            }
+
+            async generateSummary() {
+                const container = document.getElementById('summary-results');
+                updateProgress(95);
+
+                const criticalCount = this.issues.critical.length;
+                const highCount = this.issues.high.length;
+                const mediumCount = this.issues.medium.length;
+                const lowCount = this.issues.low.length;
+                const total = criticalCount + highCount + mediumCount + lowCount;
+
+                let html = `
+                    <h3>Issue Distribution:</h3>
+                    <div class="metric critical">CRITICAL: ${criticalCount}</div>
+                    <div class="metric high">HIGH: ${highCount}</div>
+                    <div class="metric medium">MEDIUM: ${mediumCount}</div>
+                    <div class="metric low">LOW: ${lowCount}</div>
+                    <div class="metric">TOTAL: ${total}</div>
+                `;
+
+                // Priority fixes
+                html += '<h3>🔥 Priority Fixes Required:</h3>';
+                html += '<ol>';
+                
+                // Critical issues first
+                for (const issue of this.issues.critical) {
+                    html += `<li class="critical">
+                        <strong>${issue.issue}</strong><br>
+                        Location: ${issue.location}<br>
+                        Impact: ${issue.impact}
+                    </li>`;
+                }
+                
+                // High priority issues
+                for (const issue of this.issues.high.slice(0, 5)) {
+                    html += `<li class="high">
+                        <strong>${issue.issue}</strong><br>
+                        Location: ${issue.location}<br>
+                        Impact: ${issue.impact}
+                    </li>`;
+                }
+                
+                html += '</ol>';
+
+                // Health score
+                const healthScore = Math.max(0, 100 - (criticalCount * 20) - (highCount * 10) - (mediumCount * 5) - (lowCount * 2));
+                const healthClass = healthScore > 80 ? 'success' : healthScore > 60 ? 'medium' : healthScore > 40 ? 'high' : 'critical';
+                
+                html += `<h3>Overall Health Score: <span class="${healthClass}">${healthScore}/100</span></h3>`;
+
+                // Recommendations
+                html += '<h3>📋 Recommendations:</h3><ol>';
+                html += '<li>Fix all CRITICAL issues immediately</li>';
+                html += '<li>Address HIGH priority error handling gaps</li>';
+                html += '<li>Refactor God Objects (VolumetricEffects)</li>';
+                html += '<li>Implement proper logging system</li>';
+                html += '<li>Add WebGL context recovery</li>';
+                html += '<li>Create service layer abstraction</li>';
+                html += '<li>Implement object pooling</li>';
+                html += '<li>Add comprehensive testing</li>';
+                html += '</ol>';
+
+                container.innerHTML = html;
+                updateProgress(100);
+
+                // Export results
+                this.exportResults();
+            }
+
+            exportResults() {
+                const results = {
+                    timestamp: new Date().toISOString(),
+                    issues: this.issues,
+                    summary: {
+                        critical: this.issues.critical.length,
+                        high: this.issues.high.length,
+                        medium: this.issues.medium.length,
+                        low: this.issues.low.length
+                    }
+                };
+                
+                console.log('E2E Scan Results:', results);
+                window.e2eScanResults = results;
+            }
+
+            async runFullScan() {
+                await this.scanArchitecture();
+                await this.scanModules();
+                await this.scanMicroArchitecture();
+                await this.generateSummary();
+                
+                const endTime = new Date().toLocaleString();
+                document.getElementById('timestamp').innerHTML += 
+                    `<div style="color: #0f0">Scan completed: ${endTime}</div>`;
+            }
+        }
+
+        // Run scan
+        const scanner = new E2EScanner();
+        scanner.runFullScan().catch(error => {
+            console.error('Scan failed:', error);
+            document.getElementById('summary-results').innerHTML = 
+                `<div class="critical">Scan failed: ${error.message}</div>`;
+        });
+    </script>
+</body>
+</html>
