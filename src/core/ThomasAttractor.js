@@ -3,16 +3,43 @@
  * Simplified version without unnecessary abstractions
  */
 
+import { InputValidator, ValidationError } from '../utils/ErrorHandling.js';
+
 export class ThomasAttractor {
     constructor(config = {}) {
-        this.b = config.b || 0.19;
-        this.dt = config.dt || 0.005;
-        this.currentState = config.seed || [0.1, 0.0, 0.0];
-        
-        // Performance optimization: pre-allocated buffers
-        this.bufferSize = config.bufferSize || 10000;
-        this.trajectory = new Float32Array(this.bufferSize * 3);
-        this.trajectoryIndex = 0;
+        // Validate configuration
+        try {
+            this.b = InputValidator.sanitize(config.b || 0.19, 'positiveNumber', 0.19);
+            this.dt = InputValidator.sanitize(config.dt || 0.005, 'positiveNumber', 0.005);
+            
+            // Validate seed state
+            if (config.seed) {
+                InputValidator.validate(config.seed, 'vec3', 'seed');
+                this.currentState = [...config.seed];
+            } else {
+                this.currentState = [0.1, 0.0, 0.0];
+            }
+            
+            // Validate and clamp buffer size
+            this.bufferSize = InputValidator.clamp(
+                InputValidator.sanitize(config.bufferSize || 10000, 'positiveInteger', 10000),
+                100,
+                1000000
+            );
+            
+            // Performance optimization: pre-allocated buffers
+            this.trajectory = new Float32Array(this.bufferSize * 3);
+            this.trajectoryIndex = 0;
+        } catch (error) {
+            console.error('ThomasAttractor initialization error:', error);
+            // Use safe defaults
+            this.b = 0.19;
+            this.dt = 0.005;
+            this.currentState = [0.1, 0.0, 0.0];
+            this.bufferSize = 10000;
+            this.trajectory = new Float32Array(this.bufferSize * 3);
+            this.trajectoryIndex = 0;
+        }
     }
 
     /**
@@ -59,6 +86,18 @@ export class ThomasAttractor {
      * Step simulation forward by n steps
      */
     step(steps = 1) {
+        // Validate input
+        try {
+            steps = InputValidator.clamp(
+                InputValidator.sanitize(steps, 'positiveInteger', 1),
+                1,
+                10000
+            );
+        } catch (error) {
+            console.warn('Invalid steps parameter, using default:', error);
+            steps = 1;
+        }
+        
         const points = [];
         
         for (let i = 0; i < steps; i++) {
@@ -127,23 +166,47 @@ export class ThomasAttractor {
      * Reset to initial state
      */
     reset(seed = null) {
-        this.currentState = seed || [0.1, 0.0, 0.0];
-        this.trajectoryIndex = 0;
-        this.trajectory.fill(0);
+        try {
+            if (seed) {
+                InputValidator.validate(seed, 'vec3', 'seed');
+                this.currentState = [...seed];
+            } else {
+                this.currentState = [0.1, 0.0, 0.0];
+            }
+            this.trajectoryIndex = 0;
+            this.trajectory.fill(0);
+        } catch (error) {
+            console.error('Reset error:', error);
+            throw new ValidationError('Invalid seed state', 'seed', seed);
+        }
     }
 
     /**
      * Set parameter b
      */
     setB(b) {
-        this.b = b;
+        try {
+            this.b = InputValidator.validate(b, 'positiveNumber', 'b');
+            // Clamp to reasonable range
+            this.b = InputValidator.clamp(this.b, 0.01, 1.0);
+        } catch (error) {
+            console.error('Invalid parameter b:', error);
+            throw new ValidationError('Parameter b must be a positive number', 'b', b);
+        }
     }
 
     /**
      * Set timestep dt
      */
     setDt(dt) {
-        this.dt = dt;
+        try {
+            this.dt = InputValidator.validate(dt, 'positiveNumber', 'dt');
+            // Clamp to stable range
+            this.dt = InputValidator.clamp(this.dt, 0.0001, 0.1);
+        } catch (error) {
+            console.error('Invalid timestep dt:', error);
+            throw new ValidationError('Timestep dt must be a positive number', 'dt', dt);
+        }
     }
 
     /**

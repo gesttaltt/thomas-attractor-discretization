@@ -709,21 +709,35 @@ export class VolumetricEffects {
 
     /**
      * Compute divergence field from velocity gradients
+     * OPTIMIZED: Cache-friendly chunk processing
      */
     computeDivergenceField() {
         const gridSize = this.config.gridSize;
+        const chunkSize = 4; // Process in 4x4x4 chunks for cache efficiency
         
-        for (let i = 1; i < gridSize - 1; i++) {
-            for (let j = 1; j < gridSize - 1; j++) {
-                for (let k = 1; k < gridSize - 1; k++) {
-                    const index = i + j * gridSize + k * gridSize * gridSize;
+        // Process in chunks for better cache locality
+        for (let ci = 1; ci < gridSize - 1; ci += chunkSize) {
+            for (let cj = 1; cj < gridSize - 1; cj += chunkSize) {
+                for (let ck = 1; ck < gridSize - 1; ck += chunkSize) {
+                    // Process chunk
+                    const iEnd = Math.min(ci + chunkSize, gridSize - 1);
+                    const jEnd = Math.min(cj + chunkSize, gridSize - 1);
+                    const kEnd = Math.min(ck + chunkSize, gridSize - 1);
                     
-                    // Calculate divergence using finite differences
-                    const dvx_dx = (this.velocityGridX[index + 1] - this.velocityGridX[index - 1]) / 2;
-                    const dvy_dy = (this.velocityGridY[index + gridSize] - this.velocityGridY[index - gridSize]) / 2;
-                    const dvz_dz = (this.velocityGridZ[index + gridSize * gridSize] - this.velocityGridZ[index - gridSize * gridSize]) / 2;
-                    
-                    this.divergenceGrid[index] = dvx_dx + dvy_dy + dvz_dz;
+                    for (let i = ci; i < iEnd; i++) {
+                        for (let j = cj; j < jEnd; j++) {
+                            for (let k = ck; k < kEnd; k++) {
+                                const index = i + j * gridSize + k * gridSize * gridSize;
+                                
+                                // Calculate divergence using finite differences
+                                const dvx_dx = (this.velocityGridX[index + 1] - this.velocityGridX[index - 1]) / 2;
+                                const dvy_dy = (this.velocityGridY[index + gridSize] - this.velocityGridY[index - gridSize]) / 2;
+                                const dvz_dz = (this.velocityGridZ[index + gridSize * gridSize] - this.velocityGridZ[index - gridSize * gridSize]) / 2;
+                                
+                                this.divergenceGrid[index] = dvx_dx + dvy_dy + dvz_dz;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -731,28 +745,42 @@ export class VolumetricEffects {
 
     /**
      * Compute vorticity field from velocity curl
+     * OPTIMIZED: Cache-friendly chunk processing
      */
     computeVorticityField() {
         const gridSize = this.config.gridSize;
+        const chunkSize = 4; // Process in 4x4x4 chunks for cache efficiency
         
-        for (let i = 1; i < gridSize - 1; i++) {
-            for (let j = 1; j < gridSize - 1; j++) {
-                for (let k = 1; k < gridSize - 1; k++) {
-                    const index = i + j * gridSize + k * gridSize * gridSize;
+        // Process in chunks for better cache locality
+        for (let ci = 1; ci < gridSize - 1; ci += chunkSize) {
+            for (let cj = 1; cj < gridSize - 1; cj += chunkSize) {
+                for (let ck = 1; ck < gridSize - 1; ck += chunkSize) {
+                    // Process chunk
+                    const iEnd = Math.min(ci + chunkSize, gridSize - 1);
+                    const jEnd = Math.min(cj + chunkSize, gridSize - 1);
+                    const kEnd = Math.min(ck + chunkSize, gridSize - 1);
                     
-                    // Calculate curl using finite differences
-                    const dvz_dy = (this.velocityGridZ[index + gridSize] - this.velocityGridZ[index - gridSize]) / 2;
-                    const dvy_dz = (this.velocityGridY[index + gridSize * gridSize] - this.velocityGridY[index - gridSize * gridSize]) / 2;
-                    
-                    const dvx_dz = (this.velocityGridX[index + gridSize * gridSize] - this.velocityGridX[index - gridSize * gridSize]) / 2;
-                    const dvz_dx = (this.velocityGridZ[index + 1] - this.velocityGridZ[index - 1]) / 2;
-                    
-                    const dvy_dx = (this.velocityGridY[index + 1] - this.velocityGridY[index - 1]) / 2;
-                    const dvx_dy = (this.velocityGridX[index + gridSize] - this.velocityGridX[index - gridSize]) / 2;
-                    
-                    this.vorticityGridX[index] = dvz_dy - dvy_dz;
-                    this.vorticityGridY[index] = dvx_dz - dvz_dx;
-                    this.vorticityGridZ[index] = dvy_dx - dvx_dy;
+                    for (let i = ci; i < iEnd; i++) {
+                        for (let j = cj; j < jEnd; j++) {
+                            for (let k = ck; k < kEnd; k++) {
+                                const index = i + j * gridSize + k * gridSize * gridSize;
+                                
+                                // Calculate curl using finite differences
+                                const dvz_dy = (this.velocityGridZ[index + gridSize] - this.velocityGridZ[index - gridSize]) / 2;
+                                const dvy_dz = (this.velocityGridY[index + gridSize * gridSize] - this.velocityGridY[index - gridSize * gridSize]) / 2;
+                                
+                                const dvx_dz = (this.velocityGridX[index + gridSize * gridSize] - this.velocityGridX[index - gridSize * gridSize]) / 2;
+                                const dvz_dx = (this.velocityGridZ[index + 1] - this.velocityGridZ[index - 1]) / 2;
+                                
+                                const dvy_dx = (this.velocityGridY[index + 1] - this.velocityGridY[index - 1]) / 2;
+                                const dvx_dy = (this.velocityGridX[index + gridSize] - this.velocityGridX[index - gridSize]) / 2;
+                                
+                                this.vorticityGridX[index] = dvz_dy - dvy_dz;
+                                this.vorticityGridY[index] = dvx_dz - dvz_dx;
+                                this.vorticityGridZ[index] = dvy_dx - dvx_dy;
+                            }
+                        }
+                    }
                 }
             }
         }

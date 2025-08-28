@@ -4,16 +4,17 @@
  */
 
 import { VolumetricEffects } from './VolumetricEffects.js';
+import { InputValidator, WebGLError } from '../utils/ErrorHandling.js';
 
 export class Renderer3D {
     constructor(canvas, config = {}) {
         this.canvas = canvas;
         this.config = {
-            maxParticles: config.maxParticles || 50000,
-            particleSize: config.particleSize || 0.012,
+            maxParticles: InputValidator.clamp(config.maxParticles || 50000, 100, 100000),
+            particleSize: InputValidator.clamp(config.particleSize || 0.012, 0.001, 0.1),
             autoRotate: config.autoRotate !== false,
-            rotationSpeed: config.rotationSpeed || 0.3,
-            cameraDistance: config.cameraDistance || 20,
+            rotationSpeed: InputValidator.clamp(config.rotationSpeed || 0.3, 0, 5),
+            cameraDistance: InputValidator.clamp(config.cameraDistance || 20, 5, 100),
             backgroundColor: config.backgroundColor || 0x000011,
             particleColor: config.particleColor || 0x64b5f6,
             enableVolumetricEffects: config.enableVolumetricEffects === true,  // Disabled by default
@@ -28,8 +29,71 @@ export class Renderer3D {
         this.controls = null;
         this.volumetricEffects = null;
         this.velocityData = [];
+        this.contextLost = false;
+        this.resources = new Set(); // Track resources for cleanup
         
+        this.setupContextHandlers();
         this.init();
+    }
+    
+    /**
+     * Setup WebGL context loss/restore handlers
+     */
+    setupContextHandlers() {
+        if (!this.canvas) return;
+        
+        this.canvas.addEventListener('webglcontextlost', (event) => {
+            event.preventDefault();
+            this.handleContextLost();
+        }, false);
+        
+        this.canvas.addEventListener('webglcontextrestored', (event) => {
+            this.handleContextRestored();
+        }, false);
+    }
+    
+    /**
+     * Handle WebGL context loss
+     */
+    handleContextLost() {
+        console.warn('WebGL context lost, pausing renderer');
+        this.contextLost = true;
+        
+        // Cancel any animation frames
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        
+        // Notify error boundary
+        if (window.errorBoundary) {
+            window.errorBoundary.handle(
+                new WebGLError('WebGL context lost', 'CONTEXT_LOST'),
+                'Renderer3D',
+                { renderer: this }
+            );
+        }
+    }
+    
+    /**
+     * Handle WebGL context restoration
+     */
+    handleContextRestored() {
+        console.log('WebGL context restored, reinitializing');
+        this.contextLost = false;
+        
+        try {
+            // Dispose old resources
+            this.dispose();
+            
+            // Reinitialize
+            this.init();
+            
+            console.log('Renderer successfully restored');
+        } catch (error) {
+            console.error('Failed to restore renderer:', error);
+            throw new WebGLError('Failed to restore WebGL context', 'RESTORE_FAILED');
+        }
     }
 
     init() {
@@ -304,20 +368,149 @@ export class Renderer3D {
         return Math.min(this.particleIndex, this.config.maxParticles);
     }
 
+    /**
+     * Proper resource cleanup to prevent memory leaks
+     */
     dispose() {
+        console.log('Disposing Renderer3D resources');
+        
+        // Dispose particles
         if (this.particles) {
-            this.particles.geometry.dispose();
-            this.particles.material.dispose();
+            if (this.particles.geometry) {
+                this.particles.geometry.dispose();
+            }
+            if (this.particles.material) {
+                if (this.particles.material.map) this.particles.material.map.dispose();
+                this.particles.material.dispose();
+            }
+            if (this.scene) {
+                this.scene.remove(this.particles);
+            }
         }
         
+        // Dispose volumetric effects
         if (this.volumetricEffects) {
             this.volumetricEffects.dispose();
         }
         
-        if (this.renderer) {
-            this.renderer.dispose();
+        // Dispose all tracked resources
+        for (const resource of this.resources) {
+            if (resource.dispose) {
+                resource.dispose();
+            }
+        }
+        this.resources.clear();
+        
+        // Dispose scene objects
+        if (this.scene) {
+            this.scene.traverse((child) => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (child.material.map) child.material.map.dispose();
+                        child.material.dispose();
+                    }
+                }
+            });
+            
+            // Clear scene
+            while (this.scene.children.length > 0) {
+                this.scene.remove(this.scene.children[0]);
+            }
         }
         
+        // Dispose renderer
+        if (this.renderer) {
+            this.renderer.renderLists.dispose();
+            this.renderer.dispose();
+            this.renderer = null;
+        }
+        
+        // Dispose controls
+        if (this.controls && this.controls.dispose) {
+            this.controls.dispose();
+            this.controls = null;
+        }
+        
+        // Remove event listeners
         window.removeEventListener('resize', this.handleResize);
+        
+        // Clear references
+        this.scene = null;
+        this.camera = null;
+        this.particles = null;
+        this.velocityData = [];
+        
+        console.log('Renderer3D resources disposed');
+    }
+    
+    /**
+     * Track resource for cleanup
+     */
+    trackResource(resource) {
+        this.resources.add(resource);
+    }
+    
+    /**
+     * Reduce quality for performance
+     */
+    reduceQuality() {
+        console.log('Reducing rendering quality for performance');
+        
+        // Reduce particle count
+        if (this.config.maxParticles > 10000) {
+            this.config.maxParticles = Math.floor(this.config.maxParticles * 0.5);
+        }
+        
+        // Reduce pixel ratio
+        if (this.renderer) {
+            this.renderer.setPixelRatio(1);
+        }
+        
+        // Disable volumetric effects
+        if (this.volumetricEffects) {
+            this.config.enableVolumetricEffects = false;
+            this.volumetricEffects.disable();
+        }
+    }
+    
+    /**
+     * Clear unused resources
+     */
+    clearUnusedResources() {
+        if (this.renderer && this.renderer.info) {
+            console.log('WebGL memory info:', this.renderer.info.memory);
+        }
+        
+        // Force garbage collection if available
+        if (global.gc) {
+            global.gc();
+        }
+    }
+    
+    /**
+     * Validate WebGL state
+     */
+    validateState() {
+        if (!this.renderer) {
+            throw new WebGLError('Renderer not initialized', 'NO_RENDERER');
+        }
+        
+        if (this.contextLost) {
+            throw new WebGLError('WebGL context is lost', 'CONTEXT_LOST');
+        }
+        
+        const gl = this.renderer.getContext();
+        const error = gl.getError();
+        if (error !== gl.NO_ERROR) {
+            throw new WebGLError(`WebGL error: ${error}`, 'GL_ERROR');
+        }
+        
+        return true;
     }
 }
