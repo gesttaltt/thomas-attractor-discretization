@@ -4,27 +4,36 @@
  */
 
 import { InputValidator, ValidationError } from '../utils/ErrorHandling.js';
+import { PHYSICS, VALIDATION } from '../utils/Constants.js';
 
 export class ThomasAttractor {
     constructor(config = {}) {
         // Validate configuration
         try {
-            this.b = InputValidator.sanitize(config.b || 0.19, 'positiveNumber', 0.19);
-            this.dt = InputValidator.sanitize(config.dt || 0.005, 'positiveNumber', 0.005);
+            this.b = InputValidator.sanitize(
+                config.b || PHYSICS.DEFAULT_B, 
+                'positiveNumber', 
+                PHYSICS.DEFAULT_B
+            );
+            this.dt = InputValidator.sanitize(
+                config.dt || PHYSICS.DEFAULT_DT, 
+                'positiveNumber', 
+                PHYSICS.DEFAULT_DT
+            );
             
             // Validate seed state
             if (config.seed) {
                 InputValidator.validate(config.seed, 'vec3', 'seed');
                 this.currentState = [...config.seed];
             } else {
-                this.currentState = [0.1, 0.0, 0.0];
+                this.currentState = [...PHYSICS.DEFAULT_SEED];
             }
             
             // Validate and clamp buffer size
             this.bufferSize = InputValidator.clamp(
-                InputValidator.sanitize(config.bufferSize || 10000, 'positiveInteger', 10000),
+                InputValidator.sanitize(config.bufferSize || PHYSICS.DEFAULT_BUFFER_SIZE || 10000, 'positiveInteger', 10000),
                 100,
-                1000000
+                VALIDATION.MAX_COORDINATE * 100
             );
             
             // Performance optimization: pre-allocated buffers
@@ -33,9 +42,9 @@ export class ThomasAttractor {
         } catch (error) {
             console.error('ThomasAttractor initialization error:', error);
             // Use safe defaults
-            this.b = 0.19;
-            this.dt = 0.005;
-            this.currentState = [0.1, 0.0, 0.0];
+            this.b = PHYSICS.DEFAULT_B;
+            this.dt = PHYSICS.DEFAULT_DT;
+            this.currentState = [...PHYSICS.DEFAULT_SEED];
             this.bufferSize = 10000;
             this.trajectory = new Float32Array(this.bufferSize * 3);
             this.trajectoryIndex = 0;
@@ -76,9 +85,9 @@ export class ThomasAttractor {
         ]);
 
         return [
-            state[0] + (dt / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]),
-            state[1] + (dt / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]),
-            state[2] + (dt / 6) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2])
+            state[0] + (dt * PHYSICS.RK4_FACTOR) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]),
+            state[1] + (dt * PHYSICS.RK4_FACTOR) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]),
+            state[2] + (dt * PHYSICS.RK4_FACTOR) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2])
         ];
     }
 
@@ -126,7 +135,7 @@ export class ThomasAttractor {
         const savedState = [...this.currentState];
         
         // Skip transient
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < PHYSICS.TRANSIENT_STEPS; i++) {
             this.currentState = this.rk4Step(this.currentState, this.dt);
         }
         
@@ -159,7 +168,7 @@ export class ThomasAttractor {
      * Get system divergence (trace of Jacobian)
      */
     getDivergence() {
-        return -3 * this.b;
+        return PHYSICS.DIVERGENCE_FACTOR * this.b;
     }
 
     /**
@@ -171,7 +180,7 @@ export class ThomasAttractor {
                 InputValidator.validate(seed, 'vec3', 'seed');
                 this.currentState = [...seed];
             } else {
-                this.currentState = [0.1, 0.0, 0.0];
+                this.currentState = [...PHYSICS.DEFAULT_SEED];
             }
             this.trajectoryIndex = 0;
             this.trajectory.fill(0);
@@ -188,7 +197,7 @@ export class ThomasAttractor {
         try {
             this.b = InputValidator.validate(b, 'positiveNumber', 'b');
             // Clamp to reasonable range
-            this.b = InputValidator.clamp(this.b, 0.01, 1.0);
+            this.b = InputValidator.clamp(this.b, PHYSICS.MIN_B, PHYSICS.MAX_B);
         } catch (error) {
             console.error('Invalid parameter b:', error);
             throw new ValidationError('Parameter b must be a positive number', 'b', b);
@@ -202,7 +211,7 @@ export class ThomasAttractor {
         try {
             this.dt = InputValidator.validate(dt, 'positiveNumber', 'dt');
             // Clamp to stable range
-            this.dt = InputValidator.clamp(this.dt, 0.0001, 0.1);
+            this.dt = InputValidator.clamp(this.dt, PHYSICS.MIN_DT, PHYSICS.MAX_DT);
         } catch (error) {
             console.error('Invalid timestep dt:', error);
             throw new ValidationError('Timestep dt must be a positive number', 'dt', dt);

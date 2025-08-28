@@ -6,17 +6,19 @@
 import { ResearchGradeDensityField } from './ResearchGradeDensityField.js';
 import { ResearchGradeVelocityField } from './ResearchGradeVelocityField.js';
 import { StochasticFieldComputer } from './StochasticFieldComputer.js';
+import { VOLUMETRIC, PERFORMANCE } from '../utils/Constants.js';
+import { GridTraversal, FiniteDifference, PerformanceMonitor } from '../utils/GridUtilities.js';
 
 export class VolumetricEffects {
     constructor(scene, config = {}) {
         this.scene = scene;
         this.config = {
-            gridSize: config.gridSize || 64,
-            spatialRange: config.spatialRange || 20,
-            densityThreshold: config.densityThreshold || 0.1,
+            gridSize: config.gridSize || VOLUMETRIC.DEFAULT_GRID_SIZE,
+            spatialRange: config.spatialRange || VOLUMETRIC.DEFAULT_SPATIAL_RANGE,
+            densityThreshold: config.densityThreshold || VOLUMETRIC.DENSITY_THRESHOLD,
             velocityScale: config.velocityScale || 1.0,
             updateInterval: config.updateInterval || 60,
-            maxTrajectoryPoints: config.maxTrajectoryPoints || 50000,
+            maxTrajectoryPoints: config.maxTrajectoryPoints || VOLUMETRIC.MAX_TRAJECTORY_POINTS,
             ...config
         };
 
@@ -72,6 +74,16 @@ export class VolumetricEffects {
         // Stochastic field computer for efficient computation
         this.stochasticComputer = null;
         this.useStochastic = config.useStochastic !== false; // Default to true
+        
+        // Performance monitoring
+        this.performanceMonitors = {
+            velocityField: new PerformanceMonitor('VelocityField'),
+            densityField: new PerformanceMonitor('DensityField'),
+            divergenceField: new PerformanceMonitor('DivergenceField'),
+            vorticityField: new PerformanceMonitor('VorticityField'),
+            update: new PerformanceMonitor('Update'),
+            rebuild: new PerformanceMonitor('RebuildArrays')
+        };
         
         this.init();
     }
@@ -640,7 +652,7 @@ export class VolumetricEffects {
      * Speedup: ~500-1000x
      */
     computeVelocityField() {
-        const startTime = performance.now();
+        this.performanceMonitors.velocityField.start();
         const gridSize = this.config.gridSize;
         const range = this.config.spatialRange;
         const cellSize = (2 * range) / gridSize;
@@ -701,8 +713,8 @@ export class VolumetricEffects {
             }
         }
         
-        const elapsed = performance.now() - startTime;
-        if (elapsed > 50) {
+        const elapsed = this.performanceMonitors.velocityField.end();
+        if (elapsed > VOLUMETRIC.SLOW_COMPUTATION_THRESHOLD) {
             console.warn(`Velocity field computation slow: ${elapsed.toFixed(1)}ms`);
         }
     }
@@ -713,34 +725,20 @@ export class VolumetricEffects {
      */
     computeDivergenceField() {
         const gridSize = this.config.gridSize;
-        const chunkSize = 4; // Process in 4x4x4 chunks for cache efficiency
         
-        // Process in chunks for better cache locality
-        for (let ci = 1; ci < gridSize - 1; ci += chunkSize) {
-            for (let cj = 1; cj < gridSize - 1; cj += chunkSize) {
-                for (let ck = 1; ck < gridSize - 1; ck += chunkSize) {
-                    // Process chunk
-                    const iEnd = Math.min(ci + chunkSize, gridSize - 1);
-                    const jEnd = Math.min(cj + chunkSize, gridSize - 1);
-                    const kEnd = Math.min(ck + chunkSize, gridSize - 1);
-                    
-                    for (let i = ci; i < iEnd; i++) {
-                        for (let j = cj; j < jEnd; j++) {
-                            for (let k = ck; k < kEnd; k++) {
-                                const index = i + j * gridSize + k * gridSize * gridSize;
-                                
-                                // Calculate divergence using finite differences
-                                const dvx_dx = (this.velocityGridX[index + 1] - this.velocityGridX[index - 1]) / 2;
-                                const dvy_dy = (this.velocityGridY[index + gridSize] - this.velocityGridY[index - gridSize]) / 2;
-                                const dvz_dz = (this.velocityGridZ[index + gridSize * gridSize] - this.velocityGridZ[index - gridSize * gridSize]) / 2;
-                                
-                                this.divergenceGrid[index] = dvx_dx + dvy_dy + dvz_dz;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Use utility for optimized grid traversal
+        GridTraversal.processChunkedBoundaries(gridSize, VOLUMETRIC.CHUNK_SIZE, (i, j, k) => {
+            const index = i + j * gridSize + k * gridSize * gridSize;
+            
+            // Use FiniteDifference utility for calculation
+            this.divergenceGrid[index] = FiniteDifference.divergence(
+                this.velocityGridX,
+                this.velocityGridY,
+                this.velocityGridZ,
+                i, j, k,
+                gridSize
+            );
+        });
     }
 
     /**
@@ -749,41 +747,24 @@ export class VolumetricEffects {
      */
     computeVorticityField() {
         const gridSize = this.config.gridSize;
-        const chunkSize = 4; // Process in 4x4x4 chunks for cache efficiency
         
-        // Process in chunks for better cache locality
-        for (let ci = 1; ci < gridSize - 1; ci += chunkSize) {
-            for (let cj = 1; cj < gridSize - 1; cj += chunkSize) {
-                for (let ck = 1; ck < gridSize - 1; ck += chunkSize) {
-                    // Process chunk
-                    const iEnd = Math.min(ci + chunkSize, gridSize - 1);
-                    const jEnd = Math.min(cj + chunkSize, gridSize - 1);
-                    const kEnd = Math.min(ck + chunkSize, gridSize - 1);
-                    
-                    for (let i = ci; i < iEnd; i++) {
-                        for (let j = cj; j < jEnd; j++) {
-                            for (let k = ck; k < kEnd; k++) {
-                                const index = i + j * gridSize + k * gridSize * gridSize;
-                                
-                                // Calculate curl using finite differences
-                                const dvz_dy = (this.velocityGridZ[index + gridSize] - this.velocityGridZ[index - gridSize]) / 2;
-                                const dvy_dz = (this.velocityGridY[index + gridSize * gridSize] - this.velocityGridY[index - gridSize * gridSize]) / 2;
-                                
-                                const dvx_dz = (this.velocityGridX[index + gridSize * gridSize] - this.velocityGridX[index - gridSize * gridSize]) / 2;
-                                const dvz_dx = (this.velocityGridZ[index + 1] - this.velocityGridZ[index - 1]) / 2;
-                                
-                                const dvy_dx = (this.velocityGridY[index + 1] - this.velocityGridY[index - 1]) / 2;
-                                const dvx_dy = (this.velocityGridX[index + gridSize] - this.velocityGridX[index - gridSize]) / 2;
-                                
-                                this.vorticityGridX[index] = dvz_dy - dvy_dz;
-                                this.vorticityGridY[index] = dvx_dz - dvz_dx;
-                                this.vorticityGridZ[index] = dvy_dx - dvx_dy;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Use utility for optimized grid traversal
+        GridTraversal.processChunkedBoundaries(gridSize, VOLUMETRIC.CHUNK_SIZE, (i, j, k) => {
+            const index = i + j * gridSize + k * gridSize * gridSize;
+            
+            // Use FiniteDifference utility for curl calculation
+            const vorticity = FiniteDifference.curl(
+                this.velocityGridX,
+                this.velocityGridY,
+                this.velocityGridZ,
+                i, j, k,
+                gridSize
+            );
+            
+            this.vorticityGridX[index] = vorticity.x;
+            this.vorticityGridY[index] = vorticity.y;
+            this.vorticityGridZ[index] = vorticity.z;
+        });
     }
 
     /**
@@ -1227,6 +1208,26 @@ export class VolumetricEffects {
         this.config[`enable${effectName.charAt(0).toUpperCase() + effectName.slice(1)}`] = false;
     }
 
+    /**
+     * Get performance report for all monitored operations
+     */
+    getPerformanceReport() {
+        const report = {};
+        for (const [name, monitor] of Object.entries(this.performanceMonitors)) {
+            report[name] = monitor.report();
+        }
+        return report;
+    }
+    
+    /**
+     * Reset performance monitoring
+     */
+    resetPerformanceMonitoring() {
+        for (const monitor of Object.values(this.performanceMonitors)) {
+            monitor.reset();
+        }
+    }
+    
     dispose() {
         // Dispose research-grade fields
         if (this.researchDensityField) {
